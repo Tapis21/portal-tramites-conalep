@@ -19,7 +19,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'name',           // nombre(s)
+        'apellidos',
+        'matricula',
+        'carrera',
+        'role',
+        'semestre',
         'email',
         'password',
     ];
@@ -45,5 +50,37 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // Relación uno a uno con ServicioSocial
+    public function servicioSocial()
+    {
+        return $this->hasOne(ServicioSocial::class);
+    }
+
+    // Relacion uno a uno con Practicas
+    public function practicas()
+    {
+        return $this->hasOne(Practicas::class);
+    }
+
+    // Relacion uno a muchos con documentos
+    public function documentos()
+    {
+        return $this->hasMany(Documentos::class);
+    }
+
+    // Relacion uno a muchos con cartasPresentacion
+    public function cartasPresentacion()
+    {
+        return $this->hasMany(CartaPresentacion::class);
+    }
+
+    // Relacion muchos a muchos con periodos
+    public function periodos()
+    {
+        return $this->belongsToMany(Periodo::class, 'estudiante_periodo')
+            ->withPivot('activo', 'fecha_asignacion')
+            ->withTimestamps();
     }
 }
