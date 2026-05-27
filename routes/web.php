@@ -1,14 +1,24 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
+use App\http\Controllers\ServicioSocialController;
 use Illuminate\Support\Facades\Route;
-use App\HTTP\Controllers\ServicioSocialController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Rutas para Servicio Social
     Route::resource('servicio-social', ServicioSocialController::class);
-    // Route::get('/servicio-social/{id}/edit', [ServicioSocialController::class, 'edit'])->name('servicio-social.edit');
-    // Route::put('/servicio-social/{id}', [ServicioSocialController::class, 'update'])->name('servicio-social.update');
 });
+
+require __DIR__.'/auth.php';

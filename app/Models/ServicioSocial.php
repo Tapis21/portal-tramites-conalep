@@ -9,6 +9,9 @@ class ServicioSocial extends Model
 {
     use HasFactory;
 
+    protected $table = 'servicio_social';
+
+
     protected $fillable = [
         'user_id',
         'horas_requeridas',
