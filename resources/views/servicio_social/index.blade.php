@@ -20,12 +20,51 @@
                 <p><strong>Horas completadas:</strong> {{ $servicioSocial->horas_completadas }}</p>
                 <p><strong>Estatus:</strong> {{ $servicioSocial->estatus }}</p>
 
+                <!-- Botones de acción: -->
                 <div class="mt-4">
                     <a href="{{ route('servicio-social.edit', $servicioSocial->id) }}"
                        class="bg-blue-500 text-white px-4 py-2 rounded">
                         Actualizar horas
                     </a>
                 </div>
+
+                @if($servicioSocial->horas_completadas >= 240 && !$servicioSocial->reporte_parcial_subido)
+                    <div class="mt-4">
+                        <a href="{{ route('servicio-social.subir-reporte-parcial', $servicioSocial->id) }}"
+                        class="bg-green-500 text-white px-4 py-2 rounded">
+                            Subir reporte parcial
+                        </a>
+                    </div>
+                @endif
+
+                @if($servicioSocial->horas_completadas >= 480 && !$servicioSocial->reporte_final_subido)
+                    <div class="mt-4">
+                        <a href="{{ route('servicio-social.subir-reporte-final', $servicioSocial->id) }}"
+                        class="bg-green-500 text-white px-4 py-2 rounded">
+                            Subir reporte final
+                        </a>
+                    </div>
+                @endif
+
+                <div class="mt-4 text-sm">
+                    <p>
+                        <strong>Reporte parcial:</strong> 
+                        @if($servicioSocial->reporte_parcial_subido)
+                            <span class="text-green-600">✅ Subido</span>
+                        @else
+                            <span class="text-yellow-600">⏳ Pendiente (mínimo 240h)</span>
+                        @endif
+                    </p>
+                    <p>
+                        <strong>Reporte final:</strong> 
+                        @if($servicioSocial->reporte_final_subido)
+                            <span class="text-green-600">✅ Subido</span>
+                        @else
+                            <span class="text-yellow-600">⏳ Pendiente (mínimo 480h)</span>
+                        @endif
+                    </p>
+                </div>
+
             </div>
         @else
             <p>No hay registro de Servicio Social para este usuario.</p>

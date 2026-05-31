@@ -19,6 +19,14 @@ Route::middleware('auth')->group(function () {
 
     // Rutas para Servicio Social
     Route::resource('servicio-social', ServicioSocialController::class);
+
+    // Rutas para subir reporte parcial
+    Route::get('servicio-social/{id}/subir-reporte-parcial', [ServicioSocialController::class, 'mostrarFormularioReporteParcial'])->name('servicio-social.subir-reporte-parcial');
+    Route::post('servicio-social/{id}/subir-reporte-parcial', [ServicioSocialController::class, 'subirReporteParcial'])->name('servicio-social.guardar-reporte-parcial');
+
+    // Ruta para subir reporte final
+    Route::get('servicio-social/{id}/subir-reporte-final', [ServicioSocialController::class, 'mostrarFormularioReporteFinal'])->name('servicio-social.subir-reporte-final');
+    Route::post('servicio-social/{id}/subir-reporte-final', [ServicioSocialController::class, 'subirReporteFinal'])->name('servicio-social.guardar-reporte-final');
 });
 
 require __DIR__.'/auth.php';
