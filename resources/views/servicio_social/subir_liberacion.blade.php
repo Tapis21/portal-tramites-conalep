@@ -27,6 +27,12 @@
                     <p class="text-xs text-gray-500 mt-1">Máximo 5MB. Solo archivos PDF.</p>
                 </div>
 
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Comentario (opcional)</label>
+                    <textarea name="comentario" rows="2" class="w-full p-2 border rounded" placeholder="Ej: Este es mi primer trámite, revisar por favor..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Puedes dejar un comentario para el administrador.</p>
+                </div>
+
                 <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Subir documento</button>
                 <a href="{{ route('servicio-social.index') }}" class="ml-2 text-gray-600">Cancelar</a>
             </form>

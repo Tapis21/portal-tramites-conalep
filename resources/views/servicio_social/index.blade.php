@@ -109,67 +109,110 @@
                                 @php
                                     $estaSubido = false;
                                     $ruta = $config['ruta'];
+                                    $feedback = null;
                                     
                                     if ($config['tipo'] == 'admin') {
                                         $estaSubido = in_array($nombre, $subidos);
+                                        // Obtener feedback del documento administrativo
+                                        if ($estaSubido) {
+                                            $doc = \App\Models\Documento::where('user_id', Auth::id())
+                                                ->whereHas('tipoDocumento', function($q) use ($nombre) {
+                                                    $q->where('nombre', $nombre);
+                                                })->first();
+                                            $feedback = $doc ? $doc->comentario_admin : null;
+                                        }
                                     } else {
                                         $campo = $config['campo'];
                                         $estaSubido = $servicioSocial->$campo ?? false;
+                                        // Obtener feedback de los informes
+                                        if ($nombre == 'Primer Informe de Actividades Trimestral') {
+                                            $feedback = $servicioSocial->comentario_admin_parcial ?? null;
+                                        } elseif ($nombre == 'Segundo Informe de Actividades Trimestral') {
+                                            $feedback = $servicioSocial->comentario_admin_final ?? null;
+                                        }
                                     }
                                 @endphp
                                 
-                                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg">
-                                    <!-- Nombre del documento -->
-                                    <div class="flex items-center gap-2 md:col-span-6">
-                                        <span class="iconify w-5 h-5 text-gray-500 flex-shrink-0" data-icon="mdi:file-document-outline"></span>
-                                        <span class="font-medium text-sm">{{ $nombre }}</span>
+                                <div class="bg-gray-50 rounded-lg">
+                                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
+                                        <!-- Nombre del documento -->
+                                        <div class="flex items-center gap-2 md:col-span-6">
+                                            <span class="iconify w-5 h-5 text-gray-500 flex-shrink-0" data-icon="mdi:file-pdf-box"></span>
+                                            <span class="font-medium text-sm">{{ $nombre }}</span>
+                                        </div>
+                                        
+                                        <!-- Estado -->
+                                        <div class="flex items-center md:col-span-3">
+                                            @if($estaSubido)
+                                                <span class="flex items-center gap-1 text-green-600 text-sm">
+                                                    <span class="iconify w-4 h-4" data-icon="mdi:check-circle"></span>
+                                                    Subido
+                                                </span>
+                                            @else
+                                                <span class="flex items-center gap-1 text-yellow-600 text-sm">
+                                                    <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                                                    Pendiente
+                                                </span>
+                                            @endif
+                                        </div>
+                                        
+                                        <!-- Acciones -->
+                                        <div class="flex flex-wrap items-center gap-2 md:col-span-3">
+                                            @if($estaSubido)
+                                                <!-- Reemplazar -->
+                                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                                class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
+                                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
+                                                    Cambiar
+                                                </a>
+                                                
+                                                <!-- Eliminar -->
+                                                @if($config['tipo'] == 'admin')
+                                                    <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" 
+                                                                class="inline-flex items-center px-3 py-1.5 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
+                                                            <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
+                                                            Eliminar
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    @php
+                                                        $tipoInforme = ($nombre == 'Primer Informe de Actividades Trimestral') ? 'primero' : 'segundo';
+                                                    @endphp
+                                                    <form method="POST" action="{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}" class="inline" 
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar este informe? Esta acción no se puede deshacer.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" 
+                                                                class="inline-flex items-center px-3 py-1.5 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
+                                                            <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
+                                                            Eliminar
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @else
+                                                <!-- Subir -->
+                                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                                class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+                                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
+                                                    Subir
+                                                </a>
+                                            @endif
+                                        </div>
                                     </div>
                                     
-                                    <!-- Estado -->
-                                    <div class="flex items-center md:col-span-3">
-                                        @if($estaSubido)
-                                            <span class="flex items-center gap-1 text-green-600 text-sm">
-                                                <span class="iconify w-4 h-4" data-icon="mdi:check-circle"></span>
-                                                Subido
-                                            </span>
-                                        @else
-                                            <span class="flex items-center gap-1 text-yellow-600 text-sm">
-                                                <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
-                                                Pendiente
-                                            </span>
-                                        @endif
-                                    </div>
-                                    
-                                    <!-- Acciones -->
-                                    <div class="flex flex-wrap items-center gap-2 md:col-span-3">
-                                        @if($estaSubido)
-                                            <!-- Reemplazar -->
-                                            <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
-                                            class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
-                                                <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
-                                                Reemplazar
-                                            </a>
-                                            
-                                            <!-- Eliminar -->
-                                            <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
-                                                onsubmit="return confirm('¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="inline-flex items-center px-3 py-1.5 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
-                                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
-                                                    Eliminar
-                                                </button>
-                                            </form>
-                                        @else
-                                            <!-- Subir -->
-                                            <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
-                                            class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                                                <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
-                                                Subir
-                                            </a>
-                                        @endif
-                                    </div>
+                                    <!-- Feedback del administrador (si existe) -->
+                                    @if($feedback)
+                                        <div class="px-3 pb-3 pt-0 text-xs text-gray-500 border-t border-gray-200 mt-1">
+                                            <div class="flex items-start gap-1">
+                                                <span class="iconify w-3 h-3 text-gray-400 mt-0.5" data-icon="mdi:comment-outline"></span>
+                                                <span>Comentario del administrador: {{ $feedback }}</span>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>

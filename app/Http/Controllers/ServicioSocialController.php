@@ -68,12 +68,6 @@ class ServicioSocialController extends Controller
                             ->with('error', 'Debes completar al menos 240 horas para subir el reporte parcial.');
         }
 
-        // Validar que no haya subido ya el reporte
-        if ($servicioSocial->reporte_parcial_subido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste el reporte parcial.');
-        }
-
         return view('servicio_social.subir_reporte_parcial', compact('servicioSocial'));
     }
 
@@ -89,21 +83,19 @@ class ServicioSocialController extends Controller
         // Validar horas
         if ($servicioSocial->horas_completadas < 240) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'No tienes las horas suficientes.');
+                            ->with('error', 'No tienes las horas suficientes (mínimo 240h).');
         }
 
-        // Validar que no haya subido ya
-        if ($servicioSocial->reporte_parcial_subido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'El reporte parcial ya fue subido.');
-        }
-
-        // Validar el archivo
         $request->validate([
-            'reporte_pdf' => 'required|file|mimes:pdf|max:5120', // Máximo 5MB
+            'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
         ]);
 
-        // Guardar el archivo
+        // Eliminar archivo anterior si existe (para reemplazo)
+        if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
+            unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
+        }
+
+        // Guardar el nuevo archivo
         $path = $request->file('reporte_pdf')->store('reportes_ss_parcial', 'public');
 
         // Actualizar la base de datos
@@ -113,7 +105,7 @@ class ServicioSocialController extends Controller
         ]);
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Reporte parcial subido correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Primer Informe subido correctamente.');
     }
 
     // Mostrar formulario para subir reporte final
@@ -130,11 +122,6 @@ class ServicioSocialController extends Controller
                             ->with('error', 'Debes completar 480 horas para subir el reporte final.');
         }
 
-        if ($servicioSocial->reporte_final_subido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste el reporte final.');
-        }
-
         return view('servicio_social.subir_reporte_final', compact('servicioSocial'));
     }
 
@@ -147,22 +134,25 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
+        // Validar horas (mínimo 480 para segundo informe)
         if ($servicioSocial->horas_completadas < 480) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'No tienes las horas suficientes.');
-        }
-
-        if ($servicioSocial->reporte_final_subido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'El reporte final ya fue subido.');
+                            ->with('error', 'No tienes las horas suficientes (mínimo 480h).');
         }
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
         ]);
 
+        // Eliminar archivo anterior si existe (para permitir reemplazo)
+        if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
+            unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
+        }
+
+        // Guardar el nuevo archivo
         $path = $request->file('reporte_pdf')->store('reportes_ss_final', 'public');
 
+        // Actualizar la base de datos
         $servicioSocial->update([
             'reporte_final_subido' => true,
             'archivo_final' => $path,
@@ -170,7 +160,7 @@ class ServicioSocialController extends Controller
         ]);
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Reporte final subido correctamente. ¡Felicidades! Has completado tu Servicio Social.');
+                        ->with('success', 'Segundo Informe subido correctamente. El administrador revisará tu documentación para liberar el trámite.');
     }
 
     // Mostrar formulario para subir solicitud
@@ -180,17 +170,6 @@ class ServicioSocialController extends Controller
 
         if ($servicioSocial->user_id !== Auth::id()) {
             abort(403);
-        }
-
-        // Verificar si ya subió la solicitud
-        $solicitudSubida = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Solicitud de Servicio Social');
-            })->exists();
-
-        if ($solicitudSubida) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la solicitud.');
         }
 
         return view('servicio_social.subir_solicitud', compact('servicioSocial'));
@@ -205,19 +184,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió la solicitud
-        $solicitudSubida = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Solicitud');
-            })->exists();
-
-        if ($solicitudSubida) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La solicitud ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -243,11 +212,12 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Solicitud subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Solicitud subida correctamente.');
     }
 
     // Mostrar formulario para subir Elección de Modalidad
@@ -260,15 +230,6 @@ class ServicioSocialController extends Controller
         }
 
         // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Elección de Modalidad');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la Elección de Modalidad.');
-        }
 
         return view('servicio_social.subir_modalidad', compact('servicioSocial'));
     }
@@ -282,19 +243,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Elección de Modalidad');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La Elección de Modalidad ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -317,7 +268,8 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
@@ -333,17 +285,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Presentación de Servicio Social');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la Carta de Presentación.');
-        }
-
         return view('servicio_social.subir_carta_presentacion', compact('servicioSocial'));
     }
 
@@ -356,19 +297,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Presentación de Servicio Social');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La Carta de Presentación ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -391,7 +322,8 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
@@ -407,17 +339,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Aceptación');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la Carta de Aceptación.');
-        }
-
         return view('servicio_social.subir_carta_aceptacion', compact('servicioSocial'));
     }
 
@@ -430,19 +351,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Aceptación');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La Carta de Aceptación ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -465,7 +376,8 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
@@ -481,17 +393,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Evaluación de Competencias del Desempeño');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la Evaluación de Competencias.');
-        }
-
         return view('servicio_social.subir_evaluacion', compact('servicioSocial'));
     }
 
@@ -504,19 +405,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Evaluación de Competencias del Desempeño');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La Evaluación de Competencias ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -539,7 +430,8 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
@@ -555,17 +447,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Liberación de Servicio Social');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Ya subiste la Carta de Liberación.');
-        }
-
         return view('servicio_social.subir_liberacion', compact('servicioSocial'));
     }
 
@@ -578,19 +459,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Verificar si ya subió el documento
-        $yaSubido = Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function ($query) {
-                $query->where('nombre', 'Carta de Liberación de Servicio Social');
-            })->exists();
-
-        if ($yaSubido) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'La Carta de Liberación ya fue subida.');
-        }
-
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar documento anterior si existe (para permitir reemplazo)
@@ -613,7 +484,8 @@ class ServicioSocialController extends Controller
             'tipo_documento_id' => $tipoDocumento->id,
             'archivo_pdf' => $path,
             'estatus' => 'pendiente',
-            'comentario' => null,
+            'comentario' => $request->comentario,
+            'comentario_admin' => null,
         ]);
 
         return redirect()->route('servicio-social.index')
@@ -649,5 +521,49 @@ class ServicioSocialController extends Controller
 
         return redirect()->route('servicio-social.index')
                         ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo.');
+    }
+
+    // Eliminar un informe (Primer o Segundo Informe)
+    public function eliminarInforme($id, $tipo)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+
+        if ($servicioSocial->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($tipo == 'primero') {
+            // Eliminar el archivo físico del primer informe
+            if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
+                unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
+            }
+            
+            $servicioSocial->update([
+                'reporte_parcial_subido' => false,
+                'archivo_parcial' => null,
+            ]);
+            
+            $mensaje = 'Primer Informe eliminado correctamente.';
+            
+        } elseif ($tipo == 'segundo') {
+            // Eliminar el archivo físico del segundo informe
+            if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
+                unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
+            }
+            
+            $servicioSocial->update([
+                'reporte_final_subido' => false,
+                'archivo_final' => null,
+            ]);
+            
+            $mensaje = 'Segundo Informe eliminado correctamente.';
+            
+        } else {
+            return redirect()->route('servicio-social.index')
+                            ->with('error', 'Tipo de informe no válido.');
+        }
+
+        return redirect()->route('servicio-social.index')
+                        ->with('success', $mensaje);
     }
 }

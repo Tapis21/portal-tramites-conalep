@@ -19,6 +19,7 @@ Route::middleware('auth')->group(function () {
 
     // Ruta para eliminar un documento específico de un trámite
     Route::delete('servicio-social/{id}/eliminar-documento/{tipo}', [ServicioSocialController::class, 'eliminarDocumento'])->name('servicio-social.eliminar-documento');
+    Route::delete('servicio-social/{id}/eliminar-informe/{tipo}', [ServicioSocialController::class, 'eliminarInforme'])->name('servicio-social.eliminar-informe');
 
     // Rutas para Servicio Social
     Route::resource('servicio-social', ServicioSocialController::class);
