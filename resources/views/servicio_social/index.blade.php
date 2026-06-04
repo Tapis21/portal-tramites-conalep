@@ -16,14 +16,23 @@
             <p><strong>Horas completadas:</strong> {{ $servicioSocial->horas_completadas }}</p>
             <p>
                 <strong>Estatus:</strong>
-                <span class="px-3 py-1 text-sm rounded-full 
-                    @if($servicioSocial->estatus == 'Liberado') bg-green-100 text-green-800
+                <span class="px-3 py-1 text-sm rounded-full inline-flex items-center gap-1
+                    @if($servicioSocial->estatus == 'liberado') bg-green-100 text-green-800
                     @elseif($servicioSocial->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
                     @elseif($servicioSocial->estatus == 'en_progreso') bg-blue-100 text-blue-800
                     @else bg-gray-100 text-gray-800 @endif">
+                    
                     @if($servicioSocial->estatus == 'pendiente_revision')
-                        Pendiente de revisión por administrador
+                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                        Pendiente de revisión
+                    @elseif($servicioSocial->estatus == 'liberado')
+                        <span class="iconify w-4 h-4" data-icon="mdi:check-decagram"></span>
+                        Trámite liberado
+                    @elseif($servicioSocial->estatus == 'en_progreso')
+                        <span class="iconify w-4 h-4" data-icon="mdi:progress-clock"></span>
+                        En progreso
                     @else
+                        <span class="iconify w-4 h-4" data-icon="mdi:file-document-outline"></span>
                         {{ ucfirst($servicioSocial->estatus) }}
                     @endif
                 </span>
@@ -101,43 +110,55 @@
                         @endphp
                         
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-2">
-                                <span class="iconify w-5 h-5 text-gray-500" data-icon="mdi:file-pdf-box"></span>
-                                <span class="font-medium">{{ $nombre }}</span>
-                            </div>
-                            
-                            <div class="flex items-center gap-3">
-                                <!-- Estado -->
-                                @if($estaSubido)
-                                    <span class="flex items-center gap-1 text-green-600">
-                                        <span class="iconify w-5 h-5" data-icon="mdi:check-circle"></span>
-                                        Subido
-                                    </span>
-                                @else
-                                    <span class="flex items-center gap-1 text-yellow-600">
-                                        <span class="iconify w-5 h-5" data-icon="mdi:clock-outline"></span>
-                                        Pendiente
-                                    </span>
-                                @endif
-                                
-                                <!-- Botón de acción -->
-                                @if($estaSubido)
-                                    <!-- Si ya está subido, mostrar "Reemplazar" -->
-                                    <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
-                                    class="inline-flex items-center px-3 py-1 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-600 transition">
-                                        <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
-                                        Cambiar
-                                    </a>
-                                @else
-                                    <!-- Si no está subido, mostrar "Subir" -->
-                                    <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
-                                    class="inline-flex items-center px-3 py-1 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                                        <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
-                                        Subir
-                                    </a>
-                                @endif
-                            </div>
+                        <div class="flex items-center gap-2">
+                            <span class="iconify w-5 h-5 text-gray-500" data-icon="mdi:file-document-outline"></span>
+                            <span class="font-medium">{{ $nombre }}</span>
                         </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <!-- Estado -->
+                            @if($estaSubido)
+                                <span class="flex items-center gap-1 text-green-600">
+                                    <span class="iconify w-5 h-5" data-icon="mdi:check-circle"></span>
+                                    Subido
+                                </span>
+                            @else
+                                <span class="flex items-center gap-1 text-yellow-600">
+                                    <span class="iconify w-5 h-5" data-icon="mdi:clock-outline"></span>
+                                    Pendiente
+                                </span>
+                            @endif
+                            
+                            <!-- Botones de acción -->
+                            @if($estaSubido)
+                                <!-- Reemplazar -->
+                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                class="inline-flex items-center px-3 py-1 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
+                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
+                                    Reemplazar
+                                </a>
+                                
+                                <!-- Eliminar -->
+                                <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
+                                    onsubmit="return confirm('¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
+                                        <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
+                                        Eliminar
+                                    </button>
+                                </form>
+                            @else
+                                <!-- Subir -->
+                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                class="inline-flex items-center px-3 py-1 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
+                                    Subir
+                                </a>
+                            @endif
+                        </div>
+                    </div>
                     @endforeach
                 </div>
             </div>

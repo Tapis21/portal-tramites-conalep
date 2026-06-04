@@ -619,4 +619,35 @@ class ServicioSocialController extends Controller
         return redirect()->route('servicio-social.index')
                         ->with('success', 'Carta de Liberación subida correctamente. Espera la validación del administrador.');
     }
+
+    // Eliminar un documento específico
+    public function eliminarDocumento($id, $tipoDocumentoNombre)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+
+        if ($servicioSocial->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Buscar y eliminar el documento
+        $documento = Documento::where('user_id', Auth::id())
+            ->whereHas('tipoDocumento', function($q) use ($tipoDocumentoNombre) {
+                $q->where('nombre', $tipoDocumentoNombre);
+            })->first();
+
+        if (!$documento) {
+            return redirect()->route('servicio-social.index')
+                            ->with('error', 'Documento no encontrado.');
+        }
+
+        // Eliminar el archivo físico
+        if (file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+            unlink(storage_path('app/public/' . $documento->archivo_pdf));
+        }
+
+        $documento->delete();
+
+        return redirect()->route('servicio-social.index')
+                        ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo.');
+    }
 }
