@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="max-w-2xl mx-auto py-10">
-    <h1 class="text-2xl font-bold mb-5">Subir Reporte Final</h1>
+    <h2 class="text-2xl font-bold mb-5">Subir Segundo Informe de Actividades Trimestral</h2>
 
     @if ($errors->any())
         <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
