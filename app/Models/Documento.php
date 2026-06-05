@@ -26,4 +26,9 @@ class Documento extends Model
     {
         return $this->belongsTo(TipoDocumento::class);
     }
+
+    public function comentarios()
+    {
+        return $this->morphMany(Comentario::class, 'comentable');
+    }
 }

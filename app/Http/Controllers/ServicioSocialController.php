@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Documento;
 use App\Models\TipoDocumento;
 
+use App\Models\Comentario;
+
 class ServicioSocialController extends Controller
 {
     // Muestra el progreso del SS del estudiante autenticado
@@ -17,7 +19,44 @@ class ServicioSocialController extends Controller
         $user = Auth::user();
         $servicioSocial = $user->servicioSocial;
 
-        return view('servicio_social.index', compact('servicioSocial'));
+        // DEFINIR LA LISTA DE DOCUMENTOS ADMINISTRATIVOS
+        $documentosAdministrativos = [
+            'Solicitud de Servicio Social',
+            'Elección de Modalidad',
+            'Carta de Presentación de Servicio Social',
+            'Carta de Aceptación',
+            'Evaluación de Competencias del Desempeño',
+            'Carta de Liberación de Servicio Social'
+        ];
+
+        // Obtener comentarios de cada documento administrativo
+        $comentariosPorDocumento = [];
+
+        foreach ($documentosAdministrativos as $nombre) {
+            $doc = Documento::where('user_id', Auth::id())
+                ->whereHas('tipoDocumento', function($q) use ($nombre) {
+                    $q->where('nombre', $nombre);
+                })
+                ->where('activo', true)
+                ->first();
+
+            if ($doc) {
+                $comentariosPorDocumento[$nombre] = $doc->comentarios()
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+            } else {
+                $comentariosPorDocumento[$nombre] = collect(); // vacío
+            }
+        }
+
+        // Comentarios para informes (Primer y Segundo)
+        $comentariosPorInforme = [
+            'primero' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
+            'segundo' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
+        ];
+
+        // Vista principal del servicio social con toda la información
+        return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
     // Formulario para actualizar horas (solo para pruebas)
@@ -88,6 +127,7 @@ class ServicioSocialController extends Controller
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
+                'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar archivo anterior si existe (para reemplazo)
@@ -103,6 +143,18 @@ class ServicioSocialController extends Controller
             'reporte_parcial_subido' => true,
             'archivo_parcial' => $path,
         ]);
+
+        // Guardar comentario del administrador (si existe en el request)
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'admin_primer_informe', // diferente
+                'user_id' => Auth::id(),
+                'comentable_id' => $servicioSocial->id,
+                'comentable_type' => 'App\Models\ServicioSocial',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
                         ->with('success', 'Primer Informe subido correctamente.');
@@ -142,6 +194,7 @@ class ServicioSocialController extends Controller
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
+                'comentario' => 'nullable|string|max:500',
         ]);
 
         // Eliminar archivo anterior si existe (para permitir reemplazo)
@@ -158,6 +211,18 @@ class ServicioSocialController extends Controller
             'archivo_final' => $path,
             'estatus' => 'pendiente_revision'
         ]);
+
+        // Guardar comentario del administrador (si existe en el request)
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'admin_segundo_informe',
+                'user_id' => Auth::id(),
+                'comentable_id' => $servicioSocial->id,
+                'comentable_type' => 'App\Models\ServicioSocial',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
                         ->with('success', 'Segundo Informe subido correctamente. El administrador revisará tu documentación para liberar el trámite.');

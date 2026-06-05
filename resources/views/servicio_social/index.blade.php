@@ -38,41 +38,20 @@
                 </span>
             </p>
 
-            <!-- Definir documentos subidos para usar en botones -->
-            @php
-                $subidos = \App\Models\Documento::where('user_id', Auth::id())
-                    ->whereHas('tipoDocumento', function($q) {
-                        $q->whereIn('nombre', [
-                            'Solicitud de Servicio Social',
-                            'Elección de Modalidad',
-                            'Carta de Presentación de Servicio Social',
-                            'Carta de Aceptación',
-                            'Evaluación de Competencias del Desempeño',
-                            'Carta de Liberación de Servicio Social'
-                        ]);
-                    })
-                    ->with('tipoDocumento')
-                    ->get()
-                    ->pluck('tipoDocumento.nombre')
-                    ->toArray();
-            @endphp
-
             <!-- Botones de acción -->
             <div class="mt-6 flex flex-wrap gap-4">
-                <!-- Actualizar horas (solo admin o pruebas) -->
                 <a href="{{ route('servicio-social.edit', $servicioSocial->id) }}" 
-                class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 transition">
+                   class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 transition">
                     <span class="iconify mr-2 w-5 h-5" data-icon="mdi:pencil"></span>
                     Actualizar horas
                 </a>
             </div>
 
-            <!-- Documentos del Servicio Social (orden correcto) -->
+            <!-- Documentos del Servicio Social -->
             <div class="mt-6">
                 <h3 class="font-semibold text-gray-700 mb-4">Documentos del Servicio Social</h3>
                 
                 @php
-                    // Definir los documentos en el orden correcto
                     $documentosOrdenados = [
                         'Solicitud de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-solicitud', 'campo' => null],
                         'Elección de Modalidad' => ['tipo' => 'admin', 'ruta' => 'subir-modalidad', 'campo' => null],
@@ -84,11 +63,11 @@
                         'Carta de Liberación de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-liberacion', 'campo' => null],
                     ];
                     
-                    // Obtener documentos administrativos subidos
                     $subidos = \App\Models\Documento::where('user_id', Auth::id())
                         ->whereHas('tipoDocumento', function($q) use ($documentosOrdenados) {
                             $q->whereIn('nombre', array_keys($documentosOrdenados));
                         })
+                        ->where('activo', true)
                         ->with('tipoDocumento')
                         ->get()
                         ->pluck('tipoDocumento.nombre')
@@ -97,7 +76,7 @@
                 
                 <div class="overflow-x-auto">
                     <div class="md:min-w-full">
-                        <!-- Encabezados (solo visible en desktop) -->
+                        <!-- Encabezados -->
                         <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 bg-gray-100 rounded-t-lg text-xs font-semibold text-gray-600 mb-2">
                             <div class="col-span-6">Documento</div>
                             <div class="col-span-3">Estado</div>
@@ -109,33 +88,18 @@
                                 @php
                                     $estaSubido = false;
                                     $ruta = $config['ruta'];
-                                    $feedback = null;
                                     
                                     if ($config['tipo'] == 'admin') {
                                         $estaSubido = in_array($nombre, $subidos);
-                                        // Obtener feedback del documento administrativo
-                                        if ($estaSubido) {
-                                            $doc = \App\Models\Documento::where('user_id', Auth::id())
-                                                ->whereHas('tipoDocumento', function($q) use ($nombre) {
-                                                    $q->where('nombre', $nombre);
-                                                })->first();
-                                            $feedback = $doc ? $doc->comentario_admin : null;
-                                        }
                                     } else {
                                         $campo = $config['campo'];
                                         $estaSubido = $servicioSocial->$campo ?? false;
-                                        // Obtener feedback de los informes
-                                        if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                            $feedback = $servicioSocial->comentario_admin_parcial ?? null;
-                                        } elseif ($nombre == 'Segundo Informe de Actividades Trimestral') {
-                                            $feedback = $servicioSocial->comentario_admin_final ?? null;
-                                        }
                                     }
                                 @endphp
                                 
                                 <div class="bg-gray-50 rounded-lg">
                                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
-                                        <!-- Nombre del documento -->
+                                        <!-- Nombre -->
                                         <div class="flex items-center gap-2 md:col-span-6">
                                             <span class="iconify w-5 h-5 text-gray-500 flex-shrink-0" data-icon="mdi:file-pdf-box"></span>
                                             <span class="font-medium text-sm">{{ $nombre }}</span>
@@ -159,21 +123,18 @@
                                         <!-- Acciones -->
                                         <div class="flex flex-wrap items-center gap-2 md:col-span-3">
                                             @if($estaSubido)
-                                                <!-- Reemplazar -->
                                                 <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
                                                     <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
                                                     Cambiar
                                                 </a>
                                                 
-                                                <!-- Eliminar -->
                                                 @if($config['tipo'] == 'admin')
                                                     <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.')">
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" 
-                                                                class="inline-flex items-center px-3 py-1.5 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
+                                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
                                                             <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
                                                             Eliminar
                                                         </button>
@@ -182,19 +143,17 @@
                                                     @php
                                                         $tipoInforme = ($nombre == 'Primer Informe de Actividades Trimestral') ? 'primero' : 'segundo';
                                                     @endphp
-                                                    <form method="POST" action="{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}" class="inline" 
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este informe? Esta acción no se puede deshacer.')">
+                                                    <form method="POST" action="{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}" class="inline"
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar este informe?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" 
-                                                                class="inline-flex items-center px-3 py-1.5 bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-600 transition">
+                                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
                                                             <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
                                                             Eliminar
                                                         </button>
                                                     </form>
                                                 @endif
                                             @else
-                                                <!-- Subir -->
                                                 <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
                                                     <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
@@ -203,15 +162,57 @@
                                             @endif
                                         </div>
                                     </div>
-                                    
-                                    <!-- Feedback del administrador (si existe) -->
-                                    @if($feedback)
-                                        <div class="px-3 pb-3 pt-0 text-xs text-gray-500 border-t border-gray-200 mt-1">
-                                            <div class="flex items-start gap-1">
-                                                <span class="iconify w-3 h-3 text-gray-400 mt-0.5" data-icon="mdi:comment-outline"></span>
-                                                <span>Comentario del administrador: {{ $feedback }}</span>
+
+                                    <!-- Comentarios para documentos administrativos -->
+                                    @if($config['tipo'] == 'admin')
+                                        @if(isset($comentariosPorDocumento[$nombre]) && $comentariosPorDocumento[$nombre]->count() > 0)
+                                            <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
+                                                @foreach($comentariosPorDocumento[$nombre] as $comentario)
+                                                    <div class="text-xs {{ $comentario->tipo == 'admin' ? 'text-orange-600' : 'text-blue-600' }} flex items-start gap-1">
+                                                        <span class="iconify w-3 h-3 mt-0.5 flex-shrink-0" 
+                                                            data-icon="{{ $comentario->tipo == 'admin' ? 'mdi:account-check' : 'mdi:account' }}"></span>
+                                                        <span>
+                                                            <strong>{{ $comentario->tipo == 'admin' ? 'Administrador' : 'Tú' }}:</strong>
+                                                            {{ $comentario->contenido }}
+                                                            <span class="text-gray-400 text-xs ml-1">({{ $comentario->created_at->diffForHumans() }})</span>
+                                                        </span>
+                                                    </div>
+                                                @endforeach
                                             </div>
-                                        </div>
+                                        @endif
+                                    @endif
+
+                                    <!-- Comentarios para informes (Primer y Segundo) -->
+                                    @if($config['tipo'] == 'informe')
+                                        @php
+                                            // Determinar qué tipo de informe es
+                                            $tipoComentario = '';
+                                            if ($nombre == 'Primer Informe de Actividades Trimestral') {
+                                                $tipoComentario = 'admin_primer_informe';
+                                            } elseif ($nombre == 'Segundo Informe de Actividades Trimestral') {
+                                                $tipoComentario = 'admin_segundo_informe';
+                                            }
+                                            
+                                            $informeComentarios = \App\Models\Comentario::where('comentable_type', 'App\Models\ServicioSocial')
+                                                ->where('comentable_id', $servicioSocial->id)
+                                                ->where('tipo', $tipoComentario)
+                                                ->orderBy('created_at', 'desc')
+                                                ->get();
+                                        @endphp
+
+                                        @if($informeComentarios->count() > 0)
+                                            <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
+                                                @foreach($informeComentarios as $comentario)
+                                                    <div class="text-xs text-orange-600 flex items-start gap-1">
+                                                        <span class="iconify w-3 h-3 mt-0.5" data-icon="mdi:account-check"></span>
+                                                        <span>
+                                                            <strong>Administrador:</strong> {{ $comentario->contenido }}
+                                                            <span class="text-gray-400 text-xs ml-1">({{ $comentario->created_at->diffForHumans() }})</span>
+                                                        </span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
                             @endforeach

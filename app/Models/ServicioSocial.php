@@ -29,4 +29,9 @@ class ServicioSocial extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function comentarios()
+    {
+        return $this->morphMany(Comentario::class, 'comentable');
+    }
 }
