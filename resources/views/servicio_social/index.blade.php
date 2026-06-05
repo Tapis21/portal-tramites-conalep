@@ -86,14 +86,23 @@
                         <div class="space-y-2">
                             @foreach($documentosOrdenados as $nombre => $config)
                                 @php
+                                    $ruta = $config['ruta']; // DEFINIR PRIMERO
                                     $estaSubido = false;
-                                    $ruta = $config['ruta'];
                                     
                                     if ($config['tipo'] == 'admin') {
-                                        $estaSubido = in_array($nombre, $subidos);
+                                        // Buscar el documento completo para saber si tiene archivo
+                                        $docActual = \App\Models\Documento::where('user_id', Auth::id())
+                                            ->whereHas('tipoDocumento', function($q) use ($nombre) {
+                                                $q->where('nombre', $nombre);
+                                            })->first();
+                                        
+                                        // Está subido solo si existe Y tiene archivo
+                                        $estaSubido = $docActual && $docActual->archivo_pdf !== null;
+                                        $doc = $docActual; // para usar en comentarios
                                     } else {
                                         $campo = $config['campo'];
                                         $estaSubido = $servicioSocial->$campo ?? false;
+                                        $doc = null;
                                     }
                                 @endphp
                                 
@@ -165,9 +174,9 @@
 
                                     <!-- Comentarios para documentos administrativos -->
                                     @if($config['tipo'] == 'admin')
-                                        @if(isset($comentariosPorDocumento[$nombre]) && $comentariosPorDocumento[$nombre]->count() > 0)
+                                        @if($doc && $doc->comentarios && $doc->comentarios->count() > 0)
                                             <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
-                                                @foreach($comentariosPorDocumento[$nombre] as $comentario)
+                                                @foreach($doc->comentarios as $comentario)
                                                     <div class="text-xs {{ $comentario->tipo == 'admin' ? 'text-orange-600' : 'text-blue-600' }} flex items-start gap-1">
                                                         <span class="iconify w-3 h-3 mt-0.5 flex-shrink-0" 
                                                             data-icon="{{ $comentario->tipo == 'admin' ? 'mdi:account-check' : 'mdi:account' }}"></span>
@@ -185,28 +194,36 @@
                                     <!-- Comentarios para informes (Primer y Segundo) -->
                                     @if($config['tipo'] == 'informe')
                                         @php
-                                            // Determinar qué tipo de informe es
-                                            $tipoComentario = '';
+                                            // Determinar qué tipos de comentarios mostrar según el informe
                                             if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                $tipoComentario = 'admin_primer_informe';
+                                                $tiposComentarios = ['estudiante_primer_informe', 'admin_primer_informe'];
                                             } elseif ($nombre == 'Segundo Informe de Actividades Trimestral') {
-                                                $tipoComentario = 'admin_segundo_informe';
+                                                $tiposComentarios = ['estudiante_segundo_informe', 'admin_segundo_informe'];
+                                            } else {
+                                                $tiposComentarios = [];
                                             }
                                             
                                             $informeComentarios = \App\Models\Comentario::where('comentable_type', 'App\Models\ServicioSocial')
                                                 ->where('comentable_id', $servicioSocial->id)
-                                                ->where('tipo', $tipoComentario)
-                                                ->orderBy('created_at', 'desc')
+                                                ->whereIn('tipo', $tiposComentarios)
+                                                ->orderBy('created_at', 'asc')
                                                 ->get();
                                         @endphp
 
                                         @if($informeComentarios->count() > 0)
                                             <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
                                                 @foreach($informeComentarios as $comentario)
-                                                    <div class="text-xs text-orange-600 flex items-start gap-1">
-                                                        <span class="iconify w-3 h-3 mt-0.5" data-icon="mdi:account-check"></span>
+                                                    @php
+                                                        $esAdmin = str_contains($comentario->tipo, 'admin');
+                                                        $color = $esAdmin ? 'text-orange-600' : 'text-blue-600';
+                                                        $icono = $esAdmin ? 'mdi:account-check' : 'mdi:account';
+                                                        $nombreMostrar = $esAdmin ? 'Administrador' : 'Tú';
+                                                    @endphp
+                                                    <div class="text-xs {{ $color }} flex items-start gap-1">
+                                                        <span class="iconify w-3 h-3 mt-0.5 flex-shrink-0" data-icon="{{ $icono }}"></span>
                                                         <span>
-                                                            <strong>Administrador:</strong> {{ $comentario->contenido }}
+                                                            <strong>{{ $nombreMostrar }}:</strong>
+                                                            {{ $comentario->contenido }}
                                                             <span class="text-gray-400 text-xs ml-1">({{ $comentario->created_at->diffForHumans() }})</span>
                                                         </span>
                                                     </div>

@@ -148,7 +148,7 @@ class ServicioSocialController extends Controller
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
-                'tipo' => 'admin_primer_informe', // diferente
+                'tipo' => 'estudiante_primer_informe', // diferente
                 'user_id' => Auth::id(),
                 'comentable_id' => $servicioSocial->id,
                 'comentable_type' => 'App\Models\ServicioSocial',
@@ -216,7 +216,7 @@ class ServicioSocialController extends Controller
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
-                'tipo' => 'admin_segundo_informe',
+                'tipo' => 'estudiante_segundo_informe',
                 'user_id' => Auth::id(),
                 'comentable_id' => $servicioSocial->id,
                 'comentable_type' => 'App\Models\ServicioSocial',
@@ -254,32 +254,49 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Solicitud de Servicio Social');
-            })->delete();
-
-        // Obtener el tipo de documento "Solicitud"
         $tipoDocumento = TipoDocumento::where('nombre', 'Solicitud de Servicio Social')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
 
-        // Guardar el archivo
+        // Buscar si ya existe un registro para este documento
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
         $path = $request->file('archivo_pdf')->store('documentos/solicitudes', 'public');
 
-        // Crear el registro en la tabla documentos
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            // Actualizar el registro existente (conservar comentarios)
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            // Crear nuevo registro (primera vez)
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        // Guardar comentario del estudiante (nuevo)
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
                         ->with('success', 'Solicitud subida correctamente.');
@@ -313,32 +330,48 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Elección de Modalidad');
-            })->delete();
-
         $tipoDocumento = TipoDocumento::where('nombre', 'Elección de Modalidad')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
         $path = $request->file('archivo_pdf')->store('documentos/modalidad', 'public');
 
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Elección de Modalidad subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Elección de Modalidad subida correctamente.');
     }
 
     // Mostrar formulario para subir Carta de Presentación
@@ -367,32 +400,48 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Carta de Presentación de Servicio Social');
-            })->delete();
-
         $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Presentación de Servicio Social')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
         $path = $request->file('archivo_pdf')->store('documentos/carta_presentacion', 'public');
 
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Presentación subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Carta de Presentación subida correctamente.');
     }
 
     // Mostrar formulario para subir Carta de Aceptación
@@ -421,32 +470,48 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Carta de Aceptación');
-            })->delete();
-
         $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Aceptación')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
         $path = $request->file('archivo_pdf')->store('documentos/carta_aceptacion', 'public');
 
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Aceptación subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Carta de Aceptación subida correctamente.');
     }
 
     // Mostrar formulario para subir Evaluación de Competencias
@@ -475,32 +540,48 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Evaluación de Competencias del Desempeño');
-            })->delete();
-
         $tipoDocumento = TipoDocumento::where('nombre', 'Evaluación de Competencias del Desempeño')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
         $path = $request->file('archivo_pdf')->store('documentos/evaluacion', 'public');
 
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Evaluación de Competencias subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Evaluación de Competencias subida correctamente.');
     }
 
     // Mostrar formulario para subir Carta de Liberación
@@ -529,32 +610,48 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar documento anterior si existe (para permitir reemplazo)
-        Documento::where('user_id', Auth::id())
-            ->whereHas('tipoDocumento', function($q) {
-                $q->where('nombre', 'Carta de Liberación de Servicio Social');
-            })->delete();
-
         $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Liberación de Servicio Social')->first();
 
         if (!$tipoDocumento) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
+                            ->with('error', 'Tipo de documento no encontrado.');
         }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
         $path = $request->file('archivo_pdf')->store('documentos/liberacion', 'public');
 
-        Documento::create([
-            'user_id' => Auth::id(),
-            'tipo_documento_id' => $tipoDocumento->id,
-            'archivo_pdf' => $path,
-            'estatus' => 'pendiente',
-            'comentario' => $request->comentario,
-            'comentario_admin' => null,
-        ]);
+        if ($documento) {
+            $documento->update([
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'updated_at' => now(),
+            ]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Liberación subida correctamente. Espera la validación del administrador.');
+                        ->with('success', 'Carta de Liberación subida correctamente.');
     }
 
     // Eliminar un documento específico
@@ -566,7 +663,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Buscar y eliminar el documento
         $documento = Documento::where('user_id', Auth::id())
             ->whereHas('tipoDocumento', function($q) use ($tipoDocumentoNombre) {
                 $q->where('nombre', $tipoDocumentoNombre);
@@ -578,14 +674,18 @@ class ServicioSocialController extends Controller
         }
 
         // Eliminar el archivo físico
-        if (file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+        if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
             unlink(storage_path('app/public/' . $documento->archivo_pdf));
         }
 
-        $documento->delete();
+        // Mantener el registro, solo limpiar el archivo
+        $documento->update([
+            'archivo_pdf' => null,
+            'estatus' => 'pendiente',
+        ]);
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo.');
+                        ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo sin perder el historial de comentarios.');
     }
 
     // Eliminar un informe (Primer o Segundo Informe)
