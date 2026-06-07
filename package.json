@@ -19,6 +19,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "@iconify/iconify": "^3.1.1"
+        "@iconify/iconify": "^3.1.1",
+        "flatpickr": "^4.6.13"
     }
 }

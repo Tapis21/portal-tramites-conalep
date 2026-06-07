@@ -19,6 +19,12 @@ class ServicioSocialController extends Controller
         $user = Auth::user();
         $servicioSocial = $user->servicioSocial;
 
+         // Si no existe o no tiene fecha de inicio, redirigir al formulario
+        if (!$servicioSocial || !$servicioSocial->fecha_inicio) {
+            return redirect()->route('solicitud-servicio-social.create')
+                ->with('info', 'Completa el formulario de solicitud para comenzar.');
+        }
+
         // DEFINIR LA LISTA DE DOCUMENTOS ADMINISTRATIVOS
         $documentosAdministrativos = [
             'Solicitud de Servicio Social',
@@ -59,39 +65,6 @@ class ServicioSocialController extends Controller
         return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
-    // Formulario para actualizar horas (solo para pruebas)
-    public function edit($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        return view('servicio_social.edit', compact('servicioSocial'));
-    }
-
-    // Actualiza las horas completadas
-    public function update(Request $request, $id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        $request->validate([
-            'horas_completadas' => 'required|integer|min:0|max:480',
-        ]);
-
-        $servicioSocial->update([
-            'horas_completadas' => $request->horas_completadas
-        ]);
-
-        return redirect()->route('servicio-social.index')
-                         ->with('success', 'Horas actualizadas correctamente.');
-    }
-
     // Mostrar formulario para subir reporte parcial
     public function mostrarFormularioReporteParcial($id)
     {
@@ -119,41 +92,45 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar horas
-        if ($servicioSocial->horas_completadas < 240) {
+        // Validar por fecha límite (no por horas)
+        if (!$servicioSocial->fecha_limite_primer_informe || now()->lt($servicioSocial->fecha_limite_primer_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'No tienes las horas suficientes (mínimo 240h).');
+                            ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y'));
         }
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
-                'comentario' => 'nullable|string|max:500',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar archivo anterior si existe (para reemplazo)
+        // Eliminar archivo anterior si existe
         if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
             unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
         }
 
-        // Guardar el nuevo archivo
         $path = $request->file('reporte_pdf')->store('reportes_ss_parcial', 'public');
 
-        // Actualizar la base de datos
         $servicioSocial->update([
             'reporte_parcial_subido' => true,
             'archivo_parcial' => $path,
         ]);
 
-        // Guardar comentario del administrador (si existe en el request)
+        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
-                'tipo' => 'estudiante_primer_informe', // diferente
+                'tipo' => 'estudiante_primer_informe',
                 'user_id' => Auth::id(),
                 'comentable_id' => $servicioSocial->id,
                 'comentable_type' => 'App\Models\ServicioSocial',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -186,33 +163,31 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar horas (mínimo 480 para segundo informe)
-        if ($servicioSocial->horas_completadas < 480) {
+        // Validar por fecha límite (no por horas)
+        if (!$servicioSocial->fecha_limite_segundo_informe || now()->lt($servicioSocial->fecha_limite_segundo_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'No tienes las horas suficientes (mínimo 480h).');
+                            ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y'));
         }
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
-                'comentario' => 'nullable|string|max:500',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar archivo anterior si existe (para permitir reemplazo)
+        // Eliminar archivo anterior si existe
         if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
             unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
         }
 
-        // Guardar el nuevo archivo
         $path = $request->file('reporte_pdf')->store('reportes_ss_final', 'public');
 
-        // Actualizar la base de datos
         $servicioSocial->update([
             'reporte_final_subido' => true,
             'archivo_final' => $path,
             'estatus' => 'pendiente_revision'
         ]);
 
-        // Guardar comentario del administrador (si existe en el request)
+        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
@@ -224,8 +199,14 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
+        }
+
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Segundo Informe subido correctamente. El administrador revisará tu documentación para liberar el trámite.');
+                        ->with('success', 'Segundo Informe subido correctamente.');
     }
 
     // Mostrar formulario para subir solicitud
@@ -269,14 +250,12 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/solicitudes', 'public');
 
         if ($documento) {
-            // Actualizar el registro existente (conservar comentarios)
             $documento->update([
                 'archivo_pdf' => $path,
                 'estatus' => 'pendiente',
                 'updated_at' => now(),
             ]);
         } else {
-            // Crear nuevo registro (primera vez)
             $documento = Documento::create([
                 'user_id' => Auth::id(),
                 'tipo_documento_id' => $tipoDocumento->id,
@@ -286,9 +265,9 @@ class ServicioSocialController extends Controller
             ]);
         }
 
-        // Guardar comentario del estudiante (nuevo)
+        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -296,6 +275,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -360,7 +345,7 @@ class ServicioSocialController extends Controller
         }
 
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -368,6 +353,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -430,7 +421,7 @@ class ServicioSocialController extends Controller
         }
 
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -438,6 +429,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -500,7 +497,7 @@ class ServicioSocialController extends Controller
         }
 
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -508,6 +505,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -570,7 +573,7 @@ class ServicioSocialController extends Controller
         }
 
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -578,6 +581,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')
@@ -640,7 +649,7 @@ class ServicioSocialController extends Controller
         }
 
         if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
+            $comentario = new Comentario([
                 'contenido' => $request->comentario,
                 'tipo' => 'estudiante',
                 'user_id' => Auth::id(),
@@ -648,6 +657,12 @@ class ServicioSocialController extends Controller
                 'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
+        }
+
+        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
+        if ($servicioSocial->estatus == 'pendiente') {
+            $servicioSocial->estatus = 'en_progreso';
+            $servicioSocial->save();
         }
 
         return redirect()->route('servicio-social.index')

@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\http\Controllers\ServicioSocialController;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\SolicitudServicioSocialController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -16,6 +18,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Rutas para Solicitud de Servicio Social
+    Route::get('/solicitud-servicio-social', [SolicitudServicioSocialController::class, 'create'])->name('solicitud-servicio-social.create');
+    Route::post('/solicitud-servicio-social', [SolicitudServicioSocialController::class, 'store'])->name('solicitud-servicio-social.store');
 
     // Ruta para eliminar un documento específico de un trámite
     Route::delete('servicio-social/{id}/eliminar-documento/{tipo}', [ServicioSocialController::class, 'eliminarDocumento'])->name('servicio-social.eliminar-documento');

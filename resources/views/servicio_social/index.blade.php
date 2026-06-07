@@ -12,40 +12,49 @@
 
     @if($servicioSocial)
         <div class="bg-white p-6 rounded shadow">
-            <p><strong>Horas requeridas:</strong> {{ $servicioSocial->horas_requeridas }}</p>
-            <p><strong>Horas completadas:</strong> {{ $servicioSocial->horas_completadas }}</p>
+            <!-- Fechas importantes -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="border rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Fecha de inicio</p>
+                    <p class="font-semibold">{{ $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Primer informe disponible</p>
+                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_primer_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y') : 'No definida' }}</p>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Segundo informe disponible</p>
+                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : 'No definida' }}</p>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Fecha de finalización</p>
+                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : 'No definida' }}</p>
+                </div>
+            </div>
+
             <p>
                 <strong>Estatus:</strong>
                 <span class="px-3 py-1 text-sm rounded-full inline-flex items-center gap-1
                     @if($servicioSocial->estatus == 'liberado') bg-green-100 text-green-800
-                    @elseif($servicioSocial->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
                     @elseif($servicioSocial->estatus == 'en_progreso') bg-blue-100 text-blue-800
+                    @elseif($servicioSocial->estatus == 'pendiente') bg-yellow-100 text-yellow-800
                     @else bg-gray-100 text-gray-800 @endif">
                     
-                    @if($servicioSocial->estatus == 'pendiente_revision')
-                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
-                        Pendiente de revisión
-                    @elseif($servicioSocial->estatus == 'liberado')
+                    @if($servicioSocial->estatus == 'liberado')
                         <span class="iconify w-4 h-4" data-icon="mdi:check-decagram"></span>
                         Trámite liberado
                     @elseif($servicioSocial->estatus == 'en_progreso')
                         <span class="iconify w-4 h-4" data-icon="mdi:progress-clock"></span>
                         En progreso
+                    @elseif($servicioSocial->estatus == 'pendiente')
+                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                        Pendiente (documentacion incompleta)
                     @else
                         <span class="iconify w-4 h-4" data-icon="mdi:file-document-outline"></span>
-                        {{ ucfirst($servicioSocial->estatus) }}
+                        No solicitado
                     @endif
                 </span>
             </p>
-
-            <!-- Botones de acción -->
-            <div class="mt-6 flex flex-wrap gap-4">
-                <a href="{{ route('servicio-social.edit', $servicioSocial->id) }}" 
-                   class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 transition">
-                    <span class="iconify mr-2 w-5 h-5" data-icon="mdi:pencil"></span>
-                    Actualizar horas
-                </a>
-            </div>
 
             <!-- Documentos del Servicio Social -->
             <div class="mt-6">
@@ -86,19 +95,17 @@
                         <div class="space-y-2">
                             @foreach($documentosOrdenados as $nombre => $config)
                                 @php
-                                    $ruta = $config['ruta']; // DEFINIR PRIMERO
+                                    $ruta = $config['ruta'];
                                     $estaSubido = false;
                                     
                                     if ($config['tipo'] == 'admin') {
-                                        // Buscar el documento completo para saber si tiene archivo
                                         $docActual = \App\Models\Documento::where('user_id', Auth::id())
                                             ->whereHas('tipoDocumento', function($q) use ($nombre) {
                                                 $q->where('nombre', $nombre);
                                             })->first();
                                         
-                                        // Está subido solo si existe Y tiene archivo
                                         $estaSubido = $docActual && $docActual->archivo_pdf !== null;
-                                        $doc = $docActual; // para usar en comentarios
+                                        $doc = $docActual;
                                     } else {
                                         $campo = $config['campo'];
                                         $estaSubido = $servicioSocial->$campo ?? false;
@@ -191,10 +198,9 @@
                                         @endif
                                     @endif
 
-                                    <!-- Comentarios para informes (Primer y Segundo) -->
+                                    <!-- Comentarios para informes -->
                                     @if($config['tipo'] == 'informe')
                                         @php
-                                            // Determinar qué tipos de comentarios mostrar según el informe
                                             if ($nombre == 'Primer Informe de Actividades Trimestral') {
                                                 $tiposComentarios = ['estudiante_primer_informe', 'admin_primer_informe'];
                                             } elseif ($nombre == 'Segundo Informe de Actividades Trimestral') {

@@ -14,15 +14,16 @@ class ServicioSocial extends Model
 
     protected $fillable = [
         'user_id',
-        'horas_requeridas',
-        'horas_completadas',
         'reporte_parcial_subido',
         'reporte_parcial_validado',
         'reporte_final_subido',
         'reporte_final_validado',
         'archivo_parcial',
         'archivo_final',
-        'estatus'
+        'estatus',
+        'fecha_inicio',
+        'fecha_limite_primer_informe',
+        'fecha_limite_segundo_informe',
     ];
 
     public function user()
@@ -33,5 +34,35 @@ class ServicioSocial extends Model
     public function comentarios()
     {
         return $this->morphMany(Comentario::class, 'comentable');
+    }
+
+    protected static function booted()
+    {
+        static::updated(function ($servicioSocial) {
+            $servicioSocial->user->update([
+                'estatus_servicio_social' => $servicioSocial->estatus
+            ]);
+        });
+
+        static::created(function ($servicioSocial) {
+            $servicioSocial->user->update([
+                'estatus_servicio_social' => $servicioSocial->estatus
+            ]);
+        });
+
+        static::deleted(function ($servicioSocial) {
+            $servicioSocial->user->update([
+                'estatus_servicio_social' => 'no_solicitado'
+            ]);
+        });
+
+        // 👇 ESTO ES NUEVO (para cambios de estatus)
+        static::updating(function ($servicioSocial) {
+            if ($servicioSocial->isDirty('estatus')) {
+                $servicioSocial->user()->update([
+                    'estatus_servicio_social' => $servicioSocial->estatus
+                ]);
+            }
+        });
     }
 }

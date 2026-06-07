@@ -27,6 +27,7 @@ class User extends Authenticatable
         'semestre',
         'email',
         'password',
+        'estatus_servicio_social',
     ];
 
     /**
