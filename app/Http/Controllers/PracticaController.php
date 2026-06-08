@@ -1,0 +1,667 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Practica;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+use App\Models\Documento;
+use App\Models\TipoDocumento;
+
+use App\Models\Comentario;
+
+use Carbon\Carbon;
+
+class PracticaController extends Controller
+{
+    // Muestra el progreso de las Prácticas del estudiante autenticado
+    public function index()
+    {
+        $user = Auth::user();
+        $servicioSocial = $user->servicioSocial;
+
+        // Validar que el Servicio Social esté liberado
+        if (!$servicioSocial || $servicioSocial->estatus !== 'liberado') {
+            return view('practicas.requisito');
+        }
+
+        $practica = $user->practicas;
+
+        // Si no existe el registro, mostrar vista "no solicitado"
+        if (!$practica) {
+            return view('practicas.no_solicitado');
+        }
+
+        $documentosAdministrativos = [
+            'Solicitud de Prácticas Profesionales',
+            'Elección de Modalidad',
+            'Carta de Presentación de Prácticas Profesionales',
+            'Carta de Aceptación',
+            'Evaluación de Competencias del Desempeño',
+            'Carta de Liberación de Prácticas Profesionales'
+        ];
+
+        $comentariosPorDocumento = [];
+
+        foreach ($documentosAdministrativos as $nombre) {
+            $doc = Documento::where('user_id', Auth::id())
+                ->whereHas('tipoDocumento', function($q) use ($nombre) {
+                    $q->where('nombre', $nombre)
+                    ->where('tramite', 'PP');
+                })
+                ->where('activo', true)
+                ->first();
+
+            if ($doc) {
+                $comentariosPorDocumento[$nombre] = $doc->comentarios()
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+            } else {
+                $comentariosPorDocumento[$nombre] = collect();
+            }
+        }
+
+        $comentariosPorInforme = [
+            'primero' => $practica->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\Practica')->get(),
+            'segundo' => $practica->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\Practica')->get(),
+        ];
+
+        return view('practicas.index', compact('practica', 'comentariosPorDocumento', 'comentariosPorInforme'));
+    }
+
+    // Procesar la subida del reporte parcial
+    public function subirReporteParcial(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        if (!$practica->fecha_limite_parcial || now()->lt($practica->fecha_limite_parcial)) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($practica->fecha_limite_parcial)->format('d/m/Y'));
+        }
+
+        $request->validate([
+            'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
+            unlink(storage_path('app/public/' . $practica->archivo_parcial));
+        }
+
+        $path = $request->file('reporte_pdf')->store('reportes_pp_parcial', 'public');
+
+        $practica->update([
+            'reporte_parcial_subido' => true,
+            'archivo_parcial' => $path,
+        ]);
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante_primer_informe',
+                'user_id' => Auth::id(),
+                'comentable_id' => $practica->id,
+                'comentable_type' => 'App\Models\Practica',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Primer Informe subido correctamente.');
+    }
+
+    public function mostrarFormularioReporteFinal($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        if (!$practica->fecha_limite_final || now()->lt($practica->fecha_limite_final)) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($practica->fecha_limite_final)->format('d/m/Y'));
+        }
+
+        return view('practicas.subir_reporte_final', compact('practica'));
+    }
+
+    public function subirReporteFinal(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        if (!$practica->fecha_limite_final || now()->lt($practica->fecha_limite_final)) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Segundo Informe.');
+        }
+
+        $request->validate([
+            'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        if ($practica->archivo_final && file_exists(storage_path('app/public/' . $practica->archivo_final))) {
+            unlink(storage_path('app/public/' . $practica->archivo_final));
+        }
+
+        $path = $request->file('reporte_pdf')->store('reportes_pp_final', 'public');
+
+        $practica->update([
+            'reporte_final_subido' => true,
+            'archivo_final' => $path,
+            'estatus' => 'pendiente_revision'
+        ]);
+
+        if ($request->filled('comentario')) {
+            $comentario = new \App\Models\Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante_segundo_informe',
+                'user_id' => Auth::id(),
+                'comentable_id' => $practica->id,
+                'comentable_type' => 'App\Models\Practica',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Segundo Informe subido correctamente.');
+    }
+
+    // Mostrar formulario para subir solicitud
+    public function mostrarFormularioSolicitud($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_solicitud', compact('practica'));
+    }
+
+    public function subirSolicitud(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Solicitud de Prácticas Profesionales')
+        ->where('tramite', 'PP')
+        ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/solicitudes_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Solicitud subida correctamente.');
+    }
+
+    // Mostrar formulario para subir Elección de Modalidad
+    public function mostrarFormularioModalidad($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_modalidad', compact('practica'));
+    }
+
+    public function subirModalidad(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Elección de Modalidad')
+            ->where('tramite', 'PP')
+            ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/modalidad_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Elección de Modalidad subida correctamente.');
+    }
+
+    // Mostrar formulario para subir Carta de Presentación
+    public function mostrarFormularioCartaPresentacion($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_carta_presentacion', compact('practica'));
+    }
+
+    public function subirCartaPresentacion(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Presentación de Prácticas Profesionales')
+            ->where('tramite', 'PP')
+            ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/carta_presentacion_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Carta de Presentación subida correctamente.');
+    }
+
+    // Mostrar formulario para subir Carta de Aceptación
+    public function mostrarFormularioCartaAceptacion($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_carta_aceptacion', compact('practica'));
+    }
+
+    public function subirCartaAceptacion(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Aceptación')
+            ->where('tramite', 'PP')
+            ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/carta_aceptacion_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Carta de Aceptación subida correctamente.');
+    }
+
+    // Mostrar formulario para subir Evaluación
+    public function mostrarFormularioEvaluacion($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_evaluacion', compact('practica'));
+    }
+
+    public function subirEvaluacion(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Evaluación de Competencias del Desempeño')
+            ->where('tramite', 'PP')
+            ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/evaluacion_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Evaluación subida correctamente.');
+    }
+
+    // Mostrar formulario para subir Liberación
+    public function mostrarFormularioLiberacion($id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+        return view('practicas.subir_liberacion', compact('practica'));
+    }
+
+    public function subirLiberacion(Request $request, $id)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $request->validate([
+            'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Liberación de Prácticas Profesionales')
+            ->where('tramite', 'PP')
+            ->first();
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
+        }
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
+
+        $path = $request->file('archivo_pdf')->store('documentos/liberacion_pp', 'public');
+
+        if ($documento) {
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+        } else {
+            $documento = Documento::create([
+                'user_id' => Auth::id(),
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
+            ]);
+            $comentario->save();
+        }
+
+        if ($practica->estatus == 'pendiente') {
+            $practica->estatus = 'en_progreso';
+            $practica->save();
+        }
+
+        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
+            $practica->estatus = 'pendiente_revision';
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Carta de Liberación subida correctamente.');
+    }
+
+    // Eliminar un documento específico
+    public function eliminarDocumento($id, $tipoDocumentoNombre)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        $documento = Documento::where('user_id', Auth::id())
+            ->whereHas('tipoDocumento', function($q) use ($tipoDocumentoNombre) {
+                $q->where('nombre', $tipoDocumentoNombre);
+            })->first();
+
+        if (!$documento) {
+            return redirect()->route('practicas.index')->with('error', 'Documento no encontrado.');
+        }
+
+        if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+            unlink(storage_path('app/public/' . $documento->archivo_pdf));
+        }
+
+        $documento->update(['archivo_pdf' => null, 'estatus' => 'pendiente']);
+
+        // NO actualizar el estatus del trámite si ya está LIBERADO
+        if ($practica->estatus !== 'liberado') {
+            if ($practica->documentosCompletos()) {
+                $practica->estatus = 'pendiente_revision';
+            } else {
+                $practica->estatus = 'pendiente';
+            }
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')
+            ->with('success', 'Documento eliminado correctamente.');
+    }
+
+    // Eliminar un informe (Primer o Segundo)
+    public function eliminarInforme($id, $tipo)
+    {
+        $practica = Practica::findOrFail($id);
+        if ($practica->user_id !== Auth::id()) abort(403);
+
+        if ($tipo == 'primero') {
+            if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
+                unlink(storage_path('app/public/' . $practica->archivo_parcial));
+            }
+            $practica->update(['reporte_parcial_subido' => false, 'archivo_parcial' => null]);
+            $mensaje = 'Primer Informe eliminado correctamente.';
+        } elseif ($tipo == 'segundo') {
+            if ($practica->archivo_final && file_exists(storage_path('app/public/' . $practica->archivo_final))) {
+                unlink(storage_path('app/public/' . $practica->archivo_final));
+            }
+            $practica->update(['reporte_final_subido' => false, 'archivo_final' => null]);
+            $mensaje = 'Segundo Informe eliminado correctamente.';
+        } else {
+            return redirect()->route('practicas.index')->with('error', 'Tipo de informe no válido.');
+        }
+
+        // NO actualizar el estatus del trámite si ya está LIBERADO
+        if ($practica->estatus !== 'liberado') {
+            if ($practica->documentosCompletos()) {
+                $practica->estatus = 'pendiente_revision';
+            } else {
+                $practica->estatus = 'pendiente';
+            }
+            $practica->save();
+        }
+
+        return redirect()->route('practicas.index')->with('success', $mensaje);
+    }
+}

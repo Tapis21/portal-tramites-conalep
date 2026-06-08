@@ -9,21 +9,95 @@ class Practica extends Model
 {
     use HasFactory;
 
+    protected $table = 'practicas';
+
     protected $fillable = [
         'user_id',
-        'horas_requeridas',
-        'horas_completadas',
+        'empresa_id',
+        'grado_academico_id',
+        'nombre_persona_carta',
+        'area_asignada',
+        'apoyo_estudiante',
+        'fecha_inicio',
+        'fecha_limite_parcial',
+        'fecha_limite_final',
         'reporte_parcial_subido',
         'reporte_parcial_validado',
         'reporte_final_subido',
         'reporte_final_validado',
         'archivo_parcial',
         'archivo_final',
-        'estatus'
+        'estatus',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
+    public function gradoAcademico()
+    {
+        return $this->belongsTo(GradoAcademico::class);
+    }
+
+    public function comentarios()
+    {
+        return $this->morphMany(Comentario::class, 'comentable');
+    }
+
+    /**
+     * Verifica si todos los documentos obligatorios están subidos
+     */
+    public function documentosCompletos()
+    {
+        // Documentos administrativos requeridos (los que están en tabla documentos)
+        $documentosRequeridos = [
+            'Solicitud de Prácticas Profesionales',
+            'Elección de Modalidad',
+            'Carta de Presentación de Prácticas Profesionales',
+            'Carta de Aceptación',
+            'Evaluación de Competencias del Desempeño',
+            'Carta de Liberación de Prácticas Profesionales'
+        ];
+
+        $subidos = Documento::where('user_id', $this->user_id)
+            ->where('activo', true)
+            ->whereHas('tipoDocumento', function($q) use ($documentosRequeridos) {
+                $q->whereIn('nombre', $documentosRequeridos);
+            })
+            ->count();
+
+        // Informes requeridos (Primer y Segundo Informe)
+        $informesSubidos = $this->reporte_parcial_subido && $this->reporte_final_subido;
+
+        return $subidos === count($documentosRequeridos) && $informesSubidos;
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($practica) {
+            $practica->user->update([
+                'estatus_practicas' => $practica->estatus
+            ]);
+        });
+
+        static::updating(function ($practica) {
+            if ($practica->isDirty('estatus')) {
+                $practica->user()->update([
+                    'estatus_practicas' => $practica->estatus
+                ]);
+            }
+        });
+
+        static::deleted(function ($practica) {
+            $practica->user->update([
+                'estatus_practicas' => 'no_solicitado'
+            ]);
+        });
     }
 }

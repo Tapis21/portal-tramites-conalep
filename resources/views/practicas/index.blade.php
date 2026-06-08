@@ -11,7 +11,7 @@
         </a>
     </div>
 
-    <h1 class="text-2xl font-bold mb-5">Mi Servicio Social</h1>
+    <h1 class="text-2xl font-bold mb-5">Mis Prácticas Profesionales</h1>
 
     @if(session('success'))
         <div class="bg-green-100 text-green-800 p-3 rounded mb-4">
@@ -19,47 +19,47 @@
         </div>
     @endif
 
-    @if($servicioSocial)
+    @if($practica)
         <div class="bg-white p-6 rounded shadow">
             <!-- Fechas importantes -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="border rounded-lg p-3">
                     <p class="text-xs text-gray-500">Fecha de inicio</p>
-                    <p class="font-semibold">{{ $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
+                    <p class="font-semibold">{{ $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
                 <div class="border rounded-lg p-3">
                     <p class="text-xs text-gray-500">Primer informe disponible</p>
-                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_primer_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y') : 'No definida' }}</p>
+                    <p class="font-semibold">{{ $practica->fecha_limite_parcial ? \Carbon\Carbon::parse($practica->fecha_limite_parcial)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
                 <div class="border rounded-lg p-3">
                     <p class="text-xs text-gray-500">Segundo informe disponible</p>
-                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : 'No definida' }}</p>
+                    <p class="font-semibold">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
                 <div class="border rounded-lg p-3">
                     <p class="text-xs text-gray-500">Fecha de finalización</p>
-                    <p class="font-semibold">{{ $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : 'No definida' }}</p>
+                    <p class="font-semibold">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
             </div>
 
             <p>
                 <strong>Estatus:</strong>
                 <span class="px-3 py-1 text-sm rounded-full inline-flex items-center gap-1
-                    @if($servicioSocial->estatus == 'liberado') bg-green-100 text-green-800
-                    @elseif($servicioSocial->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
-                    @elseif($servicioSocial->estatus == 'en_progreso') bg-blue-100 text-blue-800
-                    @elseif($servicioSocial->estatus == 'pendiente') bg-yellow-100 text-yellow-800
+                    @if($practica->estatus == 'liberado') bg-green-100 text-green-800
+                    @elseif($practica->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
+                    @elseif($practica->estatus == 'en_progreso') bg-blue-100 text-blue-800
+                    @elseif($practica->estatus == 'pendiente') bg-yellow-100 text-yellow-800
                     @else bg-gray-100 text-gray-800 @endif">
                     
-                    @if($servicioSocial->estatus == 'liberado')
+                    @if($practica->estatus == 'liberado')
                         <span class="iconify w-4 h-4" data-icon="mdi:check-decagram"></span>
                         Trámite liberado
-                    @elseif($servicioSocial->estatus == 'pendiente_revision')
+                    @elseif($practica->estatus == 'pendiente_revision')
                         <span class="iconify w-4 h-4" data-icon="mdi:clock-check"></span>
                         Pendiente de revisión
-                    @elseif($servicioSocial->estatus == 'en_progreso')
+                    @elseif($practica->estatus == 'en_progreso')
                         <span class="iconify w-4 h-4" data-icon="mdi:progress-clock"></span>
                         En progreso
-                    @elseif($servicioSocial->estatus == 'pendiente')
+                    @elseif($practica->estatus == 'pendiente')
                         <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
                         Pendiente (documentación incompleta)
                     @else
@@ -69,26 +69,26 @@
                 </span>
             </p>
 
-            <!-- Documentos del Servicio Social -->
+            <!-- Documentos de Prácticas Profesionales -->
             <div class="mt-6">
-                <h3 class="font-semibold text-gray-700 mb-4">Documentos del Servicio Social</h3>
+                <h3 class="font-semibold text-gray-700 mb-4">Documentos de Prácticas Profesionales</h3>
                 
                 @php
                     $documentosOrdenados = [
-                        'Solicitud de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-solicitud', 'campo' => null],
+                        'Solicitud de Prácticas Profesionales' => ['tipo' => 'admin', 'ruta' => 'subir-solicitud', 'campo' => null],
                         'Elección de Modalidad' => ['tipo' => 'admin', 'ruta' => 'subir-modalidad', 'campo' => null],
-                        'Carta de Presentación de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-carta-presentacion', 'campo' => null],
+                        'Carta de Presentación de Prácticas Profesionales' => ['tipo' => 'admin', 'ruta' => 'subir-carta-presentacion', 'campo' => null],
                         'Carta de Aceptación' => ['tipo' => 'admin', 'ruta' => 'subir-carta-aceptacion', 'campo' => null],
                         'Primer Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-parcial', 'campo' => 'reporte_parcial_subido'],
                         'Segundo Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-final', 'campo' => 'reporte_final_subido'],
                         'Evaluación de Competencias del Desempeño' => ['tipo' => 'admin', 'ruta' => 'subir-evaluacion', 'campo' => null],
-                        'Carta de Liberación de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-liberacion', 'campo' => null],
+                        'Carta de Liberación de Prácticas Profesionales' => ['tipo' => 'admin', 'ruta' => 'subir-liberacion', 'campo' => null],
                     ];
                     
                     $subidos = \App\Models\Documento::where('user_id', Auth::id())
                         ->whereHas('tipoDocumento', function($q) use ($documentosOrdenados) {
                             $q->whereIn('nombre', array_keys($documentosOrdenados))
-                              ->where('tramite', 'SS');
+                            ->where('tramite', 'PP');
                         })
                         ->where('activo', true)
                         ->with('tipoDocumento')
@@ -116,14 +116,14 @@
                                         $docActual = \App\Models\Documento::where('user_id', Auth::id())
                                             ->whereHas('tipoDocumento', function($q) use ($nombre) {
                                                 $q->where('nombre', $nombre)
-                                                  ->where('tramite', 'SS');
+                                                  ->where('tramite', 'PP');
                                             })->first();
                                         
                                         $estaSubido = $docActual && $docActual->archivo_pdf !== null;
                                         $doc = $docActual;
                                     } else {
                                         $campo = $config['campo'];
-                                        $estaSubido = $servicioSocial->$campo ?? false;
+                                        $estaSubido = $practica->$campo ?? false;
                                         $doc = null;
                                     }
                                 @endphp
@@ -141,9 +141,9 @@
                                             @if($config['tipo'] == 'informe')
                                                 @php
                                                     if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                        $validado = $servicioSocial->reporte_parcial_validado ?? false;
+                                                        $validado = $practica->reporte_parcial_validado ?? false;
                                                     } else {
-                                                        $validado = $servicioSocial->reporte_final_validado ?? false;
+                                                        $validado = $practica->reporte_final_validado ?? false;
                                                     }
                                                 @endphp
                                                 
@@ -194,14 +194,14 @@
                                         <!-- Acciones -->
                                         <div class="flex flex-wrap items-center gap-2 md:col-span-3">
                                             @if($estaSubido)
-                                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                                <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
                                                     <span class="iconify mr-1 w-4 h-4" data-icon="mdi:refresh"></span>
                                                     Cambiar
                                                 </a>
                                                 
                                                 @if($config['tipo'] == 'admin')
-                                                    <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
+                                                    <form method="POST" action="{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}" class="inline" 
                                                         onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
                                                         @csrf
                                                         @method('DELETE')
@@ -214,7 +214,7 @@
                                                     @php
                                                         $tipoInforme = ($nombre == 'Primer Informe de Actividades Trimestral') ? 'primero' : 'segundo';
                                                     @endphp
-                                                    <form method="POST" action="{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}" class="inline"
+                                                    <form method="POST" action="{{ route('practicas.eliminar-informe', [$practica->id, $tipoInforme]) }}" class="inline"
                                                         onsubmit="return confirm('¿Estás seguro de eliminar este informe?')">
                                                         @csrf
                                                         @method('DELETE')
@@ -225,7 +225,7 @@
                                                     </form>
                                                 @endif
                                             @else
-                                                <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
+                                                <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
                                                     <span class="iconify mr-1 w-4 h-4" data-icon="mdi:cloud-upload"></span>
                                                     Subir
@@ -264,8 +264,8 @@
                                                 $tiposComentarios = [];
                                             }
                                             
-                                            $informeComentarios = \App\Models\Comentario::where('comentable_type', 'App\Models\ServicioSocial')
-                                                ->where('comentable_id', $servicioSocial->id)
+                                            $informeComentarios = \App\Models\Comentario::where('comentable_type', 'App\Models\Practica')
+                                                ->where('comentable_id', $practica->id)
                                                 ->whereIn('tipo', $tiposComentarios)
                                                 ->orderBy('created_at', 'asc')
                                                 ->get();
@@ -300,7 +300,7 @@
             </div>
         </div>
     @else
-        <p>No hay registro de Servicio Social para este usuario.</p>
+        <p>No hay registro de Prácticas Profesionales para este usuario.</p>
     @endif
 </div>
 @endsection

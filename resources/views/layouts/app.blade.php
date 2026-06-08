@@ -30,8 +30,8 @@
                 </header>
             @endisset
 
-            <!-- Page Content -->
-            <main>
+            <!-- Page Content (con ajuste responsivo) -->
+            <main class="pt-16 sm:pt-0 sm:ml-64">
                 @yield('content')
             </main>
         </div>

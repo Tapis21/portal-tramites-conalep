@@ -19,13 +19,11 @@ class ServicioSocialController extends Controller
         $user = Auth::user();
         $servicioSocial = $user->servicioSocial;
 
-         // Si no existe o no tiene fecha de inicio, redirigir al formulario
         if (!$servicioSocial || !$servicioSocial->fecha_inicio) {
             return redirect()->route('solicitud-servicio-social.create')
                 ->with('info', 'Completa el formulario de solicitud para comenzar.');
         }
 
-        // DEFINIR LA LISTA DE DOCUMENTOS ADMINISTRATIVOS
         $documentosAdministrativos = [
             'Solicitud de Servicio Social',
             'Elección de Modalidad',
@@ -35,13 +33,13 @@ class ServicioSocialController extends Controller
             'Carta de Liberación de Servicio Social'
         ];
 
-        // Obtener comentarios de cada documento administrativo
         $comentariosPorDocumento = [];
 
         foreach ($documentosAdministrativos as $nombre) {
             $doc = Documento::where('user_id', Auth::id())
                 ->whereHas('tipoDocumento', function($q) use ($nombre) {
-                    $q->where('nombre', $nombre);
+                    $q->where('nombre', $nombre)
+                      ->where('tramite', 'SS');
                 })
                 ->where('activo', true)
                 ->first();
@@ -51,17 +49,15 @@ class ServicioSocialController extends Controller
                     ->orderBy('created_at', 'desc')
                     ->get();
             } else {
-                $comentariosPorDocumento[$nombre] = collect(); // vacío
+                $comentariosPorDocumento[$nombre] = collect();
             }
         }
 
-        // Comentarios para informes (Primer y Segundo)
         $comentariosPorInforme = [
             'primero' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
             'segundo' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
         ];
 
-        // Vista principal del servicio social con toda la información
         return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
@@ -74,10 +70,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar que tenga al menos 240 horas
-        if ($servicioSocial->horas_completadas < 240) {
+        if (!$servicioSocial->fecha_limite_primer_informe || now()->lt($servicioSocial->fecha_limite_primer_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Debes completar al menos 240 horas para subir el reporte parcial.');
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y'));
         }
 
         return view('servicio_social.subir_reporte_parcial', compact('servicioSocial'));
@@ -92,10 +87,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar por fecha límite (no por horas)
         if (!$servicioSocial->fecha_limite_primer_informe || now()->lt($servicioSocial->fecha_limite_primer_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y'));
+                ->with('error', 'Aún no puedes subir el Primer Informe.');
         }
 
         $request->validate([
@@ -103,7 +97,6 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar archivo anterior si existe
         if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
             unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
         }
@@ -115,7 +108,6 @@ class ServicioSocialController extends Controller
             'archivo_parcial' => $path,
         ]);
 
-        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
@@ -127,14 +119,18 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Primer Informe subido correctamente.');
+            ->with('success', 'Primer Informe subido correctamente.');
     }
 
     // Mostrar formulario para subir reporte final
@@ -146,9 +142,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        if ($servicioSocial->horas_completadas < 480) {
+        if (!$servicioSocial->fecha_limite_segundo_informe || now()->lt($servicioSocial->fecha_limite_segundo_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Debes completar 480 horas para subir el reporte final.');
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y'));
         }
 
         return view('servicio_social.subir_reporte_final', compact('servicioSocial'));
@@ -163,10 +159,9 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar por fecha límite (no por horas)
         if (!$servicioSocial->fecha_limite_segundo_informe || now()->lt($servicioSocial->fecha_limite_segundo_informe)) {
             return redirect()->route('servicio-social.index')
-                            ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y'));
+                ->with('error', 'Aún no puedes subir el Segundo Informe.');
         }
 
         $request->validate([
@@ -174,7 +169,6 @@ class ServicioSocialController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Eliminar archivo anterior si existe
         if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
             unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
         }
@@ -184,10 +178,8 @@ class ServicioSocialController extends Controller
         $servicioSocial->update([
             'reporte_final_subido' => true,
             'archivo_final' => $path,
-            'estatus' => 'pendiente_revision'
         ]);
 
-        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
             $comentario = new \App\Models\Comentario([
                 'contenido' => $request->comentario,
@@ -199,50 +191,45 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Segundo Informe subido correctamente.');
+            ->with('success', 'Segundo Informe subido correctamente.');
     }
 
     // Mostrar formulario para subir solicitud
     public function mostrarFormularioSolicitud($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_solicitud', compact('servicioSocial'));
     }
 
-    // Procesar la subida de la solicitud
     public function subirSolicitud(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Solicitud de Servicio Social')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Solicitud de Servicio Social')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
-        // Buscar si ya existe un registro para este documento
         $documento = Documento::where('user_id', Auth::id())
             ->where('tipo_documento_id', $tipoDocumento->id)
             ->first();
@@ -250,11 +237,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/solicitudes', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -265,7 +248,6 @@ class ServicioSocialController extends Controller
             ]);
         }
 
-        // Guardar comentario del estudiante
         if ($request->filled('comentario')) {
             $comentario = new Comentario([
                 'contenido' => $request->comentario,
@@ -277,49 +259,42 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Solicitud subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Solicitud subida correctamente.');
     }
 
     // Mostrar formulario para subir Elección de Modalidad
     public function mostrarFormularioModalidad($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        // Verificar si ya subió el documento
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_modalidad', compact('servicioSocial'));
     }
 
-    // Procesar la subida de Elección de Modalidad
     public function subirModalidad(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Elección de Modalidad')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Elección de Modalidad')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
         $documento = Documento::where('user_id', Auth::id())
@@ -329,11 +304,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/modalidad', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -355,47 +326,42 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Elección de Modalidad subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Elección de Modalidad subida correctamente.');
     }
 
     // Mostrar formulario para subir Carta de Presentación
     public function mostrarFormularioCartaPresentacion($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_carta_presentacion', compact('servicioSocial'));
     }
 
-    // Procesar la subida de Carta de Presentación
     public function subirCartaPresentacion(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Presentación de Servicio Social')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Presentación de Servicio Social')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
         $documento = Documento::where('user_id', Auth::id())
@@ -405,11 +371,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_presentacion', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -431,47 +393,42 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Presentación subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Carta de Presentación subida correctamente.');
     }
 
     // Mostrar formulario para subir Carta de Aceptación
     public function mostrarFormularioCartaAceptacion($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_carta_aceptacion', compact('servicioSocial'));
     }
 
-    // Procesar la subida de Carta de Aceptación
     public function subirCartaAceptacion(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Aceptación')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Aceptación')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
         $documento = Documento::where('user_id', Auth::id())
@@ -481,11 +438,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_aceptacion', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -507,47 +460,42 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Aceptación subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Carta de Aceptación subida correctamente.');
     }
 
-    // Mostrar formulario para subir Evaluación de Competencias
+    // Mostrar formulario para subir Evaluación
     public function mostrarFormularioEvaluacion($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_evaluacion', compact('servicioSocial'));
     }
 
-    // Procesar la subida de Evaluación de Competencias
     public function subirEvaluacion(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Evaluación de Competencias del Desempeño')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Evaluación de Competencias del Desempeño')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
         $documento = Documento::where('user_id', Auth::id())
@@ -557,11 +505,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/evaluacion', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -583,47 +527,42 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Evaluación de Competencias subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Evaluación subida correctamente.');
     }
 
-    // Mostrar formulario para subir Carta de Liberación
+    // Mostrar formulario para subir Liberación
     public function mostrarFormularioLiberacion($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
-
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
         return view('servicio_social.subir_liberacion', compact('servicioSocial'));
     }
 
-    // Procesar la subida de Carta de Liberación
     public function subirLiberacion(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'archivo_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Liberación de Servicio Social')->first();
-
+        $tipoDocumento = TipoDocumento::where('nombre', 'Carta de Liberación de Servicio Social')
+            ->where('tramite', 'SS')
+            ->first();
         if (!$tipoDocumento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de documento no encontrado.');
         }
 
         $documento = Documento::where('user_id', Auth::id())
@@ -633,11 +572,7 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/liberacion', 'public');
 
         if ($documento) {
-            $documento->update([
-                'archivo_pdf' => $path,
-                'estatus' => 'pendiente',
-                'updated_at' => now(),
-            ]);
+            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -659,24 +594,24 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        // ACTUALIZAR ESTATUS DEL TRÁMITE A 'en_progreso' SI ESTABA 'pendiente'
         if ($servicioSocial->estatus == 'pendiente') {
             $servicioSocial->estatus = 'en_progreso';
             $servicioSocial->save();
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', 'Carta de Liberación subida correctamente.');
+        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
+            $servicioSocial->estatus = 'pendiente_revision';
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', 'Carta de Liberación subida correctamente.');
     }
 
     // Eliminar un documento específico
     public function eliminarDocumento($id, $tipoDocumentoNombre)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         $documento = Documento::where('user_id', Auth::id())
             ->whereHas('tipoDocumento', function($q) use ($tipoDocumentoNombre) {
@@ -684,66 +619,61 @@ class ServicioSocialController extends Controller
             })->first();
 
         if (!$documento) {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Documento no encontrado.');
+            return redirect()->route('servicio-social.index')->with('error', 'Documento no encontrado.');
         }
 
-        // Eliminar el archivo físico
         if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
             unlink(storage_path('app/public/' . $documento->archivo_pdf));
         }
 
-        // Mantener el registro, solo limpiar el archivo
-        $documento->update([
-            'archivo_pdf' => null,
-            'estatus' => 'pendiente',
-        ]);
+        $documento->update(['archivo_pdf' => null, 'estatus' => 'pendiente']);
+
+        // NO actualizar el estatus del trámite si ya está LIBERADO
+        if ($servicioSocial->estatus !== 'liberado') {
+            if ($servicioSocial->documentosCompletos()) {
+                $servicioSocial->estatus = 'pendiente_revision';
+            } else {
+                $servicioSocial->estatus = 'pendiente';
+            }
+            $servicioSocial->save();
+        }
 
         return redirect()->route('servicio-social.index')
-                        ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo sin perder el historial de comentarios.');
+            ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo sin perder el historial de comentarios.');
     }
 
     // Eliminar un informe (Primer o Segundo Informe)
     public function eliminarInforme($id, $tipo)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
-
-        if ($servicioSocial->user_id !== Auth::id()) {
-            abort(403);
-        }
+        if ($servicioSocial->user_id !== Auth::id()) abort(403);
 
         if ($tipo == 'primero') {
-            // Eliminar el archivo físico del primer informe
             if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
                 unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
             }
-            
-            $servicioSocial->update([
-                'reporte_parcial_subido' => false,
-                'archivo_parcial' => null,
-            ]);
-            
+            $servicioSocial->update(['reporte_parcial_subido' => false, 'archivo_parcial' => null]);
             $mensaje = 'Primer Informe eliminado correctamente.';
-            
         } elseif ($tipo == 'segundo') {
-            // Eliminar el archivo físico del segundo informe
             if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
                 unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
             }
-            
-            $servicioSocial->update([
-                'reporte_final_subido' => false,
-                'archivo_final' => null,
-            ]);
-            
+            $servicioSocial->update(['reporte_final_subido' => false, 'archivo_final' => null]);
             $mensaje = 'Segundo Informe eliminado correctamente.';
-            
         } else {
-            return redirect()->route('servicio-social.index')
-                            ->with('error', 'Tipo de informe no válido.');
+            return redirect()->route('servicio-social.index')->with('error', 'Tipo de informe no válido.');
         }
 
-        return redirect()->route('servicio-social.index')
-                        ->with('success', $mensaje);
+        // NO actualizar el estatus del trámite si ya está LIBERADO
+        if ($servicioSocial->estatus !== 'liberado') {
+            if ($servicioSocial->documentosCompletos()) {
+                $servicioSocial->estatus = 'pendiente_revision';
+            } else {
+                $servicioSocial->estatus = 'pendiente';
+            }
+            $servicioSocial->save();
+        }
+
+        return redirect()->route('servicio-social.index')->with('success', $mensaje);
     }
 }

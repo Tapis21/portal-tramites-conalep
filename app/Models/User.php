@@ -62,7 +62,7 @@ class User extends Authenticatable
     // Relacion uno a uno con Practicas
     public function practicas()
     {
-        return $this->hasOne(Practicas::class);
+        return $this->hasOne(Practica::class);
     }
 
     // Relacion uno a muchos con documentos
