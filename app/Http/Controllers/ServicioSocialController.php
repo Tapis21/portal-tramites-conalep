@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\ServicioSocial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Carbon\Carbon;
 use App\Models\Documento;
 use App\Models\TipoDocumento;
 
 use App\Models\Comentario;
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class ServicioSocialController extends Controller
 {
@@ -675,5 +680,295 @@ class ServicioSocialController extends Controller
         }
 
         return redirect()->route('servicio-social.index')->with('success', $mensaje);
+    }
+
+    // ==============================================
+    // DESCARGA DE WORD RELLENO (USANDO PHPWORD)
+    // ==============================================
+    public function descargarWordRelleno($id)
+    {
+        $servicioSocial = ServicioSocial::with('user', 'empresa', 'gradoAcademico', 'horario', 'gradoAcademicoJefe')->findOrFail($id);
+        
+        // Verificar que el usuario sea el dueño
+        if ($servicioSocial->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        Carbon::setLocale('es');
+
+        $user = $servicioSocial->user;
+        
+        // Datos para reemplazar en la plantilla
+        $variables = [
+            'nombre_completo' => trim($user->name . '' . $user->apellidos), // ← NUEVA LÍNEA
+            'nombre' => $user->name,
+            'apellidos' => $user->apellidos,
+            'matricula' => $user->matricula,
+            'grupo' => $user->grupo ?? '',
+            'carrera' => $user->carrera,
+            'semestre' => $user->semestre,
+            'turno' => $user->nombre_turno,
+            'generacion' => $user->nombre_periodo_actual,
+            'fecha_inicio' => $servicioSocial->fecha_inicio ? Carbon::parse($servicioSocial->fecha_inicio)->translatedFormat('d \d\e F \d\e Y') : '',
+            'fecha_finalizacion' => $servicioSocial->fecha_limite_segundo_informe ? Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->translatedFormat('d \d\e F \d\e Y') : '',
+            'horario' => $servicioSocial->horario ? $servicioSocial->horario->hora_inicio . ' - ' . $servicioSocial->horario->hora_fin : '',
+            'empresa' => $servicioSocial->empresa->nombre ?? '',
+            'grado_academico' => $servicioSocial->gradoAcademico->abreviatura ?? '',
+            'nombre_persona_carta' => $servicioSocial->nombre_persona_carta,
+            'cargo_persona_carta' => $servicioSocial->cargo_persona_carta,
+            'grado_academico_jefe' => $servicioSocial->gradoAcademicoJefe->abreviatura ?? '',
+            'nombre_jefe_inmediato' => $servicioSocial->nombre_jefe_inmediato,
+            'cargo_jefe_inmediato' => $servicioSocial->cargo_jefe_inmediato,
+            'area_asignada' => $servicioSocial->area_asignada,
+            'apoyo_estudiante' => $servicioSocial->apoyo_estudiante,
+        ];
+
+        // Cargar la plantilla usando TemplateProcessor
+        $templatePath = storage_path('app/templates/solicitud_plantilla.docx');
+        
+        // Verificar que la plantilla existe
+        if (!file_exists($templatePath)) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'No se encontró la plantilla de solicitud.');
+        }
+        
+        $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor($templatePath);
+
+        // Reemplazar variables
+        foreach ($variables as $key => $value) {
+            $templateProcessor->setValue($key, $value);
+        }
+
+        // Crear carpeta temporal si no existe
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        // Guardar archivo temporal
+        $tempPath = storage_path('app/temp/solicitud_' . $user->matricula . '.docx');
+        $templateProcessor->saveAs($tempPath);
+
+        // Descargar
+        return response()->download($tempPath, 'solicitud_' . $user->matricula . '.docx')->deleteFileAfterSend(true);
+    }
+
+    // ==============================================
+    // DESCARGA DE PDF DESDE HTML (OPCIONAL)
+    // ==============================================
+    public function descargarPlantillaPreliminar($id)
+    {
+        $servicioSocial = ServicioSocial::with('user')->findOrFail($id);
+        
+        // Verificar que el usuario sea el dueño
+        if ($servicioSocial->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        try {
+            // Obtener datos del usuario
+            $user = $servicioSocial->user;
+            
+            // Separar nombre y apellidos
+            $nombreParts = explode(' ', $user->name ?? '');
+            $nombre = $nombreParts[0] ?? '';
+            $apellidos = implode(' ', array_slice($nombreParts, 1)) ?? '';
+
+            Carbon::setLocale('es');
+            
+            // Preparar los placeholders
+            $datos = [
+                'nombre' => $nombre,
+                'apellidos' => $apellidos,
+                'matricula' => $user->matricula ?? '',
+                'turno' => $user->turno ?? '',
+                'semestre' => $user->semestre ?? '',
+                'carrera' => $user->carrera ?? '',
+                'generacion' => $user->generacion ?? '',
+                'fecha_inicio' => $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio)->translatedFormat('d \\d\\e F \\d\\e Y') : '',
+                'fecha_finalizacion' => $servicioSocial->fecha_termino ? \Carbon\Carbon::parse($servicioSocial->fecha_termino)->translatedFormat('d \\d\\e F \\d\\e Y') : '',
+                'horario' => $servicioSocial->horario ?? '',
+                'nombre_persona_carta' => $servicioSocial->nombre_supervisor ?? '',
+                'cargo_persona_carta' => $servicioSocial->cargo_persona_carta ?? '',
+                'grado_academico_jefe' => $servicioSocial->gradoAcademicoJefe->abreviatura ?? '',
+                'nombre_jefe_inmediato' => $servicioSocial->nombre_jefe_inmediato ?? '',
+                'cargo_jefe_inmediato' => $servicioSocial->cargo_jefe_inmediato ?? '',
+                'grado_academico' => $servicioSocial->grado_academico ?? '',
+                'empresa' => $servicioSocial->nombre_empresa ?? '',
+                'area_asignada' => $servicioSocial->departamento ?? '',
+                'apoyo_estudiante' => $servicioSocial->apoyo_estudiante ?? '',
+            ];
+            
+            // Generar HTML
+            $html = $this->generarHtmlSolicitud($datos);
+            
+            // Configurar Dompdf
+            $options = new Options();
+            $options->set('defaultFont', 'Arial');
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', false);
+            $dompdf = new Dompdf($options);
+            
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            
+            // Nombre del archivo
+            $nombreArchivo = 'solicitud_servicio_social_' . ($user->matricula ?? $user->id) . '.pdf';
+            
+            return $dompdf->download($nombreArchivo);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error generando plantilla preliminar: ' . $e->getMessage());
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Error al generar la solicitud: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Genera el HTML de la solicitud con los datos reemplazados
+     */
+    private function generarHtmlSolicitud($datos)
+    {
+        $nombreCompleto = trim(($datos['nombre'] ?? '') . ' ' . ($datos['apellidos'] ?? ''));
+        
+        return '<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Solicitud de Servicio Social</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 11pt;
+                    margin: 60px 50px;
+                    line-height: 1.4;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .header strong, .header em {
+                    display: block;
+                }
+                .title {
+                    text-align: center;
+                    font-weight: bold;
+                    margin: 30px 0 20px 0;
+                    text-decoration: underline;
+                }
+                .importante {
+                    font-size: 9pt;
+                    font-style: italic;
+                    margin: 15px 0;
+                    text-align: justify;
+                }
+                .datos {
+                    margin: 15px 0;
+                }
+                h4 {
+                    margin: 20px 0 10px 0;
+                    background: #f0f0f0;
+                    padding: 5px;
+                }
+                .firma-container {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 50px;
+                }
+                .firma {
+                    text-align: center;
+                    width: 45%;
+                }
+                .footer {
+                    font-size: 8pt;
+                    text-align: center;
+                    margin-top: 40px;
+                    border-top: 1px solid #ccc;
+                    padding-top: 10px;
+                }
+                hr {
+                    margin: 15px 0;
+                }
+                u {
+                    text-decoration: underline;
+                }
+                .nota-final {
+                    font-size: 9pt;
+                    text-align: justify;
+                    margin-top: 30px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <strong>Colegio de Educación Profesional Técnica del Estado de Quintana Roo.</strong>
+                <em>ORGANISMO PÚBLICO DESCENTRALIZADO</em>
+                <strong>Plantel Cancún II</strong>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <strong>JEFATURA DE PROYECTO DE PROMOCIÓN Y VINCULACIÓN</strong>
+            </div>
+            
+            <div class="title">
+                SOLICITUD DE INSCRIPCIÓN AL PROGRAMA DE SERVICIO SOCIAL ( ) PRÁCTICAS PROFESIONALES ( )
+            </div>
+            
+            <div class="importante">
+                <strong>LEER, IMPORTANTE:</strong> De acuerdo al título cuarto y del Capítulo IV art.135 al 141 y capitulo V art. 142 al 149 de las Reglas de convivencia Escolar del Sistema Nacional de Colegios de Educación Profesional Técnica se presenta la siguiente solicitud, el cual debe ser debidamente llenada por el estudiante, firmada y sellada por la institución o empresa que reciba al estudiante para que el colegio le extienda posteriormente la carta de presentación.
+            </div>
+            
+            <hr>
+            
+            <h4>DATOS DEL ESTUDIANTE</h4>
+            <div class="datos">
+                Nombre: <u><strong>' . htmlspecialchars($nombreCompleto) . '</strong></u><br>
+                Grupo: _____________ Matrícula: <u><strong>' . htmlspecialchars($datos['matricula'] ?? '_____________') . '</strong></u><br>
+                Turno: <u><strong>' . htmlspecialchars($datos['turno'] ?? '_____________') . '</strong></u> Semestre: <u><strong>' . htmlspecialchars($datos['semestre'] ?? '_____________') . '°</strong></u><br>
+                Carrera: <u><strong>' . htmlspecialchars($datos['carrera'] ?? '_____________') . '</strong></u> Generación: <u><strong>' . htmlspecialchars($datos['generacion'] ?? '_____________') . '</strong></u>
+            </div>
+            
+            <h4>FECHA DE INICIO Y TÉRMINO</h4>
+            <div class="datos">
+                Del día <u><strong>' . htmlspecialchars($datos['fecha_inicio'] ?? '_____________') . '</strong></u> al día <u><strong>' . htmlspecialchars($datos['fecha_finalizacion'] ?? '_____________') . '</strong></u><br>
+                En el Horario de: <u><strong>' . htmlspecialchars($datos['horario'] ?? '_____________') . '</strong></u>, cubriendo 4 hrs. al día de Lunes a viernes con un total de horas SS: 480 ( ) PP: 360( ) a lo largo de su servicio/prácticas
+            </div>
+            
+            <h4>DATOS DE LA INSTITUCIÓN O EMPRESA</h4>
+            <div class="datos">
+                Grado académico, nombre completo y cargo de a quien irá dirigida la carta de presentación:<br>
+                <u><strong>' . htmlspecialchars($datos['nombre_persona_carta'] ?? '_________________________') . '</strong></u><br><br>
+                Grado académico, nombre y cargo del jefe inmediato:<br>
+                <u><strong>' . htmlspecialchars($datos['grado_academico'] ?? '_________________________') . ' ' . htmlspecialchars($datos['nombre_persona_carta'] ?? '_________________________') . '</strong></u><br><br>
+                Institución/Empresa: <u><strong>' . htmlspecialchars($datos['empresa'] ?? '_________________________') . '</strong></u><br><br>
+                Área asignada: <u><strong>' . htmlspecialchars($datos['area_asignada'] ?? '_________________________') . '</strong></u><br><br>
+                Tipo de apoyo brindado al estudiante:<br>
+                <u><strong>' . htmlspecialchars($datos['apoyo_estudiante'] ?? '_________________________') . '</strong></u>
+            </div>
+            
+            <div class="nota-final">
+                <strong>LEER, IMPORTANTE:</strong> Con el fin de dar cumplimiento a los prescrito por la Ley Reglamentaria del Artículo 5º Constitucional, el suscrito acepta sujetarse al reglamento correspondiente y cumplir con el periodo manifestado, así como observar una conducta ejemplar durante su permanencia de lo contrario no le será extendida la constancia que lo acredite por la prestación de dicho servicio o práctica; igualmente, la institución o la empresa notificará al colegio los hechos en los que incurra el estudiante o cualquier evento a favor del mismo.
+            </div>
+            
+            <div class="firma-container">
+                <div class="firma">
+                    <br><br><br><br>
+                    <u>_________________________</u><br>
+                    <strong>NOMBRE Y FIRMA DEL ALUMNO</strong>
+                </div>
+                <div class="firma">
+                    <br><br><br><br>
+                    <u>_________________________</u><br>
+                    <strong>SELLO Y FIRMA DE LA EMPRESA/INSTITUCIÓN</strong>
+                </div>
+            </div>
+            
+            <div class="footer">
+                Región 228, Mza 5, Lote 1, Av. 20 de Nov. Entre costa maya y calle 61, zona 4, Cancún, Quintana Roo, CP. 77516<br>
+                Certificado conforme a los requisitos de la norma ISO 9001:2008<br>
+                Teléfono y Fax (01 998) 2710194 - e-mail: vinculacion.cancun2@qroo.conalep.edu.mx
+            </div>
+        </body>
+        </html>';
     }
 }

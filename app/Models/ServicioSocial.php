@@ -16,6 +16,9 @@ class ServicioSocial extends Model
         'empresa_id',
         'grado_academico_id',
         'nombre_persona_carta',
+        'cargo_persona_carta',
+        'nombre_jefe_inmediato',
+        'cargo_jefe_inmediato',
         'area_asignada',
         'apoyo_estudiante',
         'fecha_inicio',
@@ -28,11 +31,34 @@ class ServicioSocial extends Model
         'archivo_parcial',
         'archivo_final',
         'estatus',
+        'horario_id',
+        'grado_academico_jefe_id'
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // RELACIONES AGREGADAS
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
+    public function gradoAcademico()
+    {
+        return $this->belongsTo(GradoAcademico::class);
+    }
+
+    public function gradoAcademicoJefe()
+    {
+        return $this->belongsTo(GradoAcademico::class, 'grado_academico_jefe_id');
+    }
+
+    public function horario()
+    {
+        return $this->belongsTo(Horario::class);
     }
 
     public function comentarios()

@@ -28,6 +28,8 @@ class User extends Authenticatable
         'email',
         'password',
         'estatus_servicio_social',
+        'turno_id',
+        'grupo',
     ];
 
     /**
@@ -53,6 +55,25 @@ class User extends Authenticatable
         ];
     }
 
+    // Relación con Turno
+    public function turno()
+    {
+        return $this->belongsTo(Turno::class);
+    }
+
+    // Accesor para obtener el nombre del turno fácilmente
+    public function getNombreTurnoAttribute()
+    {
+        return $this->turno ? $this->turno->nombre : 'No definido';
+    }
+
+    // Accesor para obtener el nombre del periodo actual
+    public function getNombrePeriodoActualAttribute()
+    {
+        $periodo = $this->periodoActual();
+        return $periodo ? $periodo->nombre : 'No definido';
+    }
+
     // Relación uno a uno con ServicioSocial
     public function servicioSocial()
     {
@@ -68,7 +89,7 @@ class User extends Authenticatable
     // Relacion uno a muchos con documentos
     public function documentos()
     {
-        return $this->hasMany(Documentos::class);
+        return $this->hasMany(Documento::class);
     }
 
     // Relacion uno a muchos con cartasPresentacion
@@ -77,11 +98,20 @@ class User extends Authenticatable
         return $this->hasMany(CartaPresentacion::class);
     }
 
-    // Relacion muchos a muchos con periodos
+    // Relación muchos a muchos con periodos (historial)
     public function periodos()
     {
         return $this->belongsToMany(Periodo::class, 'estudiante_periodo')
-            ->withPivot('activo', 'fecha_asignacion')
-            ->withTimestamps();
+                    ->withPivot('estatus')
+                    ->withTimestamps();
+    }
+
+    // Periodo actual del estudiante
+    public function periodoActual()
+    {
+        return $this->belongsToMany(Periodo::class, 'estudiante_periodo')
+                    ->wherePivot('estatus', 'cursando')
+                    ->withPivot('estatus')
+                    ->first();
     }
 }

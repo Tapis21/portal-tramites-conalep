@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('periodos', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre'); // "2023-2026"
-            $table->date('fecha_inicio');
-            $table->date('fecha_fin');
+            $table->year('año_inicio');
+            $table->year('año_fin');
+            $table->string('nombre')->nullable(); // Se generará automáticamente
             $table->boolean('activo')->default(false);
             $table->timestamps();
         });

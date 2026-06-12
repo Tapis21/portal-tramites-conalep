@@ -38,6 +38,13 @@ Route::middleware('auth')->group(function () {
     // Subir solicitud
     Route::get('servicio-social/{id}/subir-solicitud', [ServicioSocialController::class, 'mostrarFormularioSolicitud'])->name('servicio-social.subir-solicitud');
     Route::post('servicio-social/{id}/subir-solicitud', [ServicioSocialController::class, 'subirSolicitud'])->name('servicio-social.guardar-solicitud');
+
+    Route::get('/servicio-social/{id}/word', [ServicioSocialController::class, 'descargarWordRelleno'])->name('servicio-social.word');
+
+    // Route::get('/solicitud-servicio-social/{id}/pdf', [SolicitudPDFController::class, 'download'])->name('solicitud-servicio-social.pdf');
+
+    Route::get('/servicio-social/{servicioSocial}/descargar-plantilla-preliminar', [ServicioSocialController::class, 'descargarPlantillaPreliminar'])
+    ->name('servicio-social.descargar-plantilla-preliminar');
     
     // Subir modalidad
     Route::get('servicio-social/{id}/subir-modalidad', [ServicioSocialController::class, 'mostrarFormularioModalidad'])->name('servicio-social.subir-modalidad');

@@ -12,8 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('periodo_id')->constrained()->onDelete('cascade');
-            $table->boolean('activo')->default(true);
-            $table->date('fecha_asignacion');
+            $table->enum('estatus', ['cursando', 'egresado', 'baja'])->default('cursando');
             $table->timestamps();
         });
     }

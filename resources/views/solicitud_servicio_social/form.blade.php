@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-4xl mx-auto py-10">
-    <h1 class="text-2xl font-bold mb-5">Solicitud de Servicio Social</h1>
+<div class="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-10">
+    <h1 class="text-xl sm:text-2xl font-bold mb-5">Solicitud de Servicio Social</h1>
 
     @if ($errors->any())
         <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-            <ul>
+            <ul class="text-sm">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -14,81 +14,151 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('solicitud-servicio-social.store') }}" class="bg-white p-6 rounded shadow">
+    <form method="POST" action="{{ route('solicitud-servicio-social.store') }}" class="bg-white p-4 sm:p-6 rounded shadow">
         @csrf
 
-        <!-- Empresa (catálogo) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Institución / Empresa</label>
-            <select name="empresa_id" class="w-full p-2 border rounded" required>
-                <option value="">Selecciona una empresa</option>
-                @foreach($empresas as $empresa)
-                    <option value="{{ $empresa->id }}" {{ old('empresa_id') == $empresa->id ? 'selected' : '' }}>
-                        {{ $empresa->nombre }}
-                    </option>
-                @endforeach
-            </select>
+        <!-- ========== 1. DATOS DEL ESTUDIANTE ========== -->
+        <div class="border-b pb-4 mb-4">
+            <h2 class="text-base sm:text-lg font-bold text-gray-800 mb-3">Datos del estudiante</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Nombre completo</label>
+                    <input type="text" value="{{ Auth::user()->name }} {{ Auth::user()->apellidos }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Matrícula</label>
+                    <input type="text" value="{{ Auth::user()->matricula }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Carrera</label>
+                    <input type="text" value="{{ Auth::user()->carrera }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Semestre</label>
+                    <input type="text" value="{{ Auth::user()->semestre }}° Semestre" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Grupo</label>
+                    <input type="text" value="{{ Auth::user()->grupo ?? 'No asignado' }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Turno</label>
+                    <input type="text" value="{{ Auth::user()->nombre_turno }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-1">Generación</label>
+                    <input type="text" value="{{ Auth::user()->nombre_periodo_actual }}" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly>
+                </div>
+            </div>
         </div>
 
-        <!-- Grado académico (catálogo) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Grado académico de quien va dirigida la carta</label>
-            <select name="grado_academico_id" class="w-full p-2 border rounded" required>
-                <option value="">Selecciona un grado</option>
-                @foreach($grados as $grado)
-                    <option value="{{ $grado->id }}" {{ old('grado_academico_id') == $grado->id ? 'selected' : '' }}>
-                        {{ $grado->nombre }} ({{ $grado->abreviatura }})
-                    </option>
-                @endforeach
-            </select>
+        <!-- ========== 2. FECHAS Y HORARIO ========== -->
+        <div class="border-b pb-4 mb-4">
+            <h2 class="text-base sm:text-lg font-bold text-gray-800 mb-3">Fechas y horario del servicio</h2>
+
+            @if(Auth::user()->turno)
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Horario de servicio</label>
+                <select name="horario_id" id="horario_id" class="w-full p-1.5 sm:p-2 border rounded bg-white text-gray-700 text-sm" required>
+                    <option value="" disabled selected class="text-gray-400">-- SELECCIONA UN HORARIO --</option>
+                    @foreach($horarios as $horario)
+                        <option value="{{ $horario->id }}" {{ old('horario_id') == $horario->id ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::parse($horario->hora_inicio)->format('g:i A') }} - 
+                            {{ \Carbon\Carbon::parse($horario->hora_fin)->format('g:i A') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Fecha de inicio</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ old('fecha_inicio') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" required>
+                    <p class="text-xs text-gray-500 mt-1">No se permiten fines de semana</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Fecha de finalización</label>
+                    <input type="text" id="fecha_finalizacion" class="w-full p-1.5 sm:p-2 border rounded bg-gray-100 text-sm" readonly placeholder="Selecciona fecha inicio">
+                    <p class="text-xs text-gray-500 mt-1">Se suman 6 meses exactos</p>
+                </div>
+            </div>
         </div>
 
-        <!-- Nombre de la persona (texto libre) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Nombre de la persona a quien va dirigida</label>
-            <input type="text" name="nombre_persona_carta" value="{{ old('nombre_persona_carta') }}" class="w-full p-2 border rounded" required>
+        <!-- ========== 3. DATOS DE LA INSTITUCION O EMPRESA ========== -->
+        <div class="border-b pb-4 mb-4">
+            <h2 class="text-base sm:text-lg font-bold text-gray-800 mb-3">Datos de la institución o empresa</h2>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Institución / Empresa</label>
+                <select name="empresa_id" class="w-full p-1.5 sm:p-2 border rounded bg-white text-gray-700 text-sm" required>
+                    <option value="" disabled selected class="text-gray-400">-- SELECCIONA UNA EMPRESA --</option>
+                    @foreach($empresas as $empresa)
+                        <option value="{{ $empresa->id }}" {{ old('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                            {{ $empresa->nombre }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Grado académico (carta)</label>
+                    <select name="grado_academico_id" class="w-full p-1.5 sm:p-2 border rounded bg-white text-gray-700 text-sm" required>
+                        <option value="" disabled selected class="text-gray-400">-- SELECCIONA UN GRADO --</option>
+                        @foreach($grados as $grado)
+                            <option value="{{ $grado->id }}" {{ old('grado_academico_id') == $grado->id ? 'selected' : '' }}>
+                                {{ $grado->nombre }} ({{ $grado->abreviatura }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Nombre de la persona</label>
+                    <input type="text" name="nombre_persona_carta" value="{{ old('nombre_persona_carta') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Cargo de la persona</label>
+                <input type="text" name="cargo_persona_carta" value="{{ old('cargo_persona_carta') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" placeholder="Ej: Director de RH" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Área asignada</label>
+                <input type="text" name="area_asignada" value="{{ old('area_asignada') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Grado académico (jefe)</label>
+                    <select name="grado_academico_jefe_id" class="w-full p-1.5 sm:p-2 border rounded bg-white text-gray-700 text-sm" required>
+                        <option value="" disabled selected class="text-gray-400">-- SELECCIONA UN GRADO --</option>
+                        @foreach($grados as $grado)
+                            <option value="{{ $grado->id }}" {{ old('grado_academico_jefe_id') == $grado->id ? 'selected' : '' }}>
+                                {{ $grado->nombre }} ({{ $grado->abreviatura }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Nombre del jefe inmediato</label>
+                    <input type="text" name="nombre_jefe_inmediato" value="{{ old('nombre_jefe_inmediato') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Cargo del jefe inmediato</label>
+                <input type="text" name="cargo_jefe_inmediato" value="{{ old('cargo_jefe_inmediato') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" placeholder="Ej: Subdirector" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold text-sm sm:text-base mb-2">Apoyo al estudiante</label>
+                <input type="text" name="apoyo_estudiante" value="{{ old('apoyo_estudiante') }}" class="w-full p-1.5 sm:p-2 border rounded text-sm" placeholder="Ej: Económico, equipo de cómputo">
+            </div>
         </div>
 
-        <!-- Área asignada (texto libre) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Área asignada</label>
-            <input type="text" name="area_asignada" value="{{ old('area_asignada') }}" class="w-full p-2 border rounded" required>
-        </div>
-
-        <!-- Apoyo al estudiante (texto libre) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Apoyo al estudiante</label>
-            <input type="text" name="apoyo_estudiante" value="{{ old('apoyo_estudiante') }}" class="w-full p-2 border rounded" placeholder="Ej: Económico, equipo de cómputo, ninguno">
-        </div>
-
-        <!-- Fecha de inicio -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Fecha de inicio</label>
-            <input type="text" 
-                   name="fecha_inicio" 
-                   id="fecha_inicio"
-                   value="{{ old('fecha_inicio') }}" 
-                   class="w-full p-2 border rounded" 
-                   required
-                   placeholder="Selecciona una fecha">
-            <p class="text-xs text-gray-500 mt-1">No se permiten fines de semana (sábado o domingo).</p>
-        </div>
-
-        <!-- Fecha de finalización (solo lectura, se calcula automáticamente) -->
-        <div class="mb-4">
-            <label class="block text-gray-700 font-semibold mb-2">Fecha de finalización (aprox.)</label>
-            <input type="text" 
-                id="fecha_finalizacion" 
-                class="w-full p-2 border rounded bg-gray-100" 
-                readonly 
-                placeholder="Selecciona una fecha de inicio primero">
-            <p class="text-xs text-gray-500 mt-1">
-                La fecha real se calculará al enviar la solicitud y se mostrará en tu panel de Servicio Social.
-                Se suman 6 meses exactos a la fecha de inicio, ajustándose si cae en fin de semana.
-            </p>
-        </div>
-
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">
             Enviar solicitud
         </button>
     </form>
@@ -97,9 +167,9 @@
 <script>
     function ajustarFechaSiFinDeSemana(fecha) {
         var dia = fecha.getDay();
-        if (dia === 6) { // Sábado
+        if (dia === 6) {
             fecha.setDate(fecha.getDate() + 2);
-        } else if (dia === 0) { // Domingo
+        } else if (dia === 0) {
             fecha.setDate(fecha.getDate() + 1);
         }
         return fecha;
@@ -117,21 +187,17 @@
         var finalizacionInput = document.getElementById('fecha_finalizacion');
         
         if (fechaInicioStr) {
-            // Crear fecha en UTC para evitar problemas de zona horaria
             var partes = fechaInicioStr.split('-');
             var fecha = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
             
-            // Sumar 6 meses
             var mesDestino = fecha.getUTCMonth() + 6;
             var añoDestino = fecha.getUTCFullYear() + Math.floor(mesDestino / 12);
             var mesDestinoFinal = mesDestino % 12;
             
-            // Crear nueva fecha con el mismo día
             var nuevaFecha = new Date(Date.UTC(añoDestino, mesDestinoFinal, fecha.getUTCDate()));
             
-            // Si el día no existe en el mes destino (ej. 31 de mayo), ajustar al último día del mes
             if (nuevaFecha.getUTCMonth() !== mesDestinoFinal) {
-                nuevaFecha.setUTCDate(0); // Último día del mes anterior
+                nuevaFecha.setUTCDate(0);
             }
             
             nuevaFecha = ajustarFechaSiFinDeSemana(nuevaFecha);

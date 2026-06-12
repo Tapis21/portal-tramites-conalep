@@ -99,11 +99,12 @@
                 
                 <div class="overflow-x-auto">
                     <div class="md:min-w-full">
-                        <!-- Encabezados -->
+                        <!-- Encabezados - AHORA CON 4 COLUMNAS -->
                         <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 bg-gray-100 rounded-t-lg text-xs font-semibold text-gray-600 mb-2">
-                            <div class="col-span-6">Documento</div>
+                            <div class="col-span-5">Documento</div>
                             <div class="col-span-3">Estado</div>
-                            <div class="col-span-3">Acciones</div>
+                            <div class="col-span-2">Descarga</div>
+                            <div class="col-span-2">Acciones</div>
                         </div>
                         
                         <div class="space-y-2">
@@ -131,7 +132,7 @@
                                 <div class="bg-gray-50 rounded-lg">
                                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
                                         <!-- Nombre -->
-                                        <div class="flex items-center gap-2 md:col-span-6">
+                                        <div class="flex items-center gap-2 md:col-span-5">
                                             <span class="iconify w-5 h-5 text-gray-500 flex-shrink-0" data-icon="mdi:file-pdf-box"></span>
                                             <span class="font-medium text-sm">{{ $nombre }}</span>
                                         </div>
@@ -191,8 +192,21 @@
                                             @endif
                                         </div>
                                         
-                                        <!-- Acciones -->
-                                        <div class="flex flex-wrap items-center gap-2 md:col-span-3">
+                                        <!-- COLUMNA DESCARGA - SOLO PARA SOLICITUD -->
+                                        <div class="md:col-span-2">
+                                            @if($nombre == 'Solicitud de Servicio Social' && $servicioSocial->fecha_inicio)
+                                                <a href="{{ route('servicio-social.word', $servicioSocial->id) }}" 
+                                                class="inline-flex items-center px-3 py-1.5 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 transition w-full justify-center">
+                                                    <span class="iconify mr-1 w-4 h-4" data-icon="mdi:download"></span>
+                                                    Descargar
+                                                </a>
+                                            @else
+                                                <span class="text-gray-400 text-xs">—</span>
+                                            @endif
+                                        </div>
+                                        
+                                        <!-- COLUMNA ACCIONES (Subir/Cambiar/Eliminar) -->
+                                        <div class="flex flex-wrap items-center gap-2 md:col-span-2">
                                             @if($estaSubido)
                                                 <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 transition">
@@ -200,30 +214,16 @@
                                                     Cambiar
                                                 </a>
                                                 
-                                                @if($config['tipo'] == 'admin')
-                                                    <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
-                                                            <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
-                                                            Eliminar
-                                                        </button>
-                                                    </form>
-                                                @else
-                                                    @php
-                                                        $tipoInforme = ($nombre == 'Primer Informe de Actividades Trimestral') ? 'primero' : 'segundo';
-                                                    @endphp
-                                                    <form method="POST" action="{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}" class="inline"
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este informe?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
-                                                            <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
-                                                            Eliminar
-                                                        </button>
-                                                    </form>
-                                                @endif
+                                                <!-- Eliminar -->
+                                                <form method="POST" action="{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}" class="inline" 
+                                                    onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
+                                                        <span class="iconify mr-1 w-4 h-4" data-icon="mdi:delete"></span>
+                                                        Eliminar
+                                                    </button>
+                                                </form>
                                             @else
                                                 <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
