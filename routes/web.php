@@ -117,6 +117,9 @@ Route::middleware('auth')->group(function () {
     // Solicitud de Prácticas Profesionales
     Route::get('/solicitud-practicas', [SolicitudPracticaController::class, 'create'])->name('solicitud-practicas.create');
     Route::post('/solicitud-practicas', [SolicitudPracticaController::class, 'store'])->name('solicitud-practicas.store');
+
+    // Marcar comentarios como leídos
+    Route::post('/comentarios/marcar-leidos', [App\Http\Controllers\ComentarioController::class, 'marcarLeidos'])->name('comentarios.marcar-leidos')->middleware('auth');
 });
 
 require __DIR__.'/auth.php';

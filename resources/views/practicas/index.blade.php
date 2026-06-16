@@ -13,41 +13,76 @@
 
     <h1 class="text-xl sm:text-2xl font-bold mb-5">Mis Prácticas Profesionales</h1>
 
+    <!-- ========================================== -->
+    <!-- ALERTAS MEJORADAS -->
+    <!-- ========================================== -->
     @if(session('success'))
-        <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-sm">
-            {{ session('success') }}
+        <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-green-500" data-icon="mdi:check-circle"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('success') }}</p>
+            </div>
+            <button type="button" class="text-green-500 hover:text-green-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" data-icon="mdi:alert-circle"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('error') }}</p>
+            </div>
+            <button type="button" class="text-red-500 hover:text-red-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
+        </div>
+    @endif
+
+    @if(session('info'))
+        <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-blue-500" data-icon="mdi:information"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('info') }}</p>
+            </div>
+            <button type="button" class="text-blue-500 hover:text-blue-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
         </div>
     @endif
 
     @if($practica)
-        <div class="bg-white p-4 sm:p-6 rounded shadow">
-            
-            <!-- Botón descargar solicitud (Word) -->
-            <div class="flex justify-end mb-4">
-                <a href="{{ route('practicas.word', $practica->id) }}" 
-                   class="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-sm hover:bg-green-700 transition">
-                    <span class="iconify w-4 h-4" data-icon="mdi:file-word"></span>
-                    Descargar solicitud (Word)
-                </a>
-            </div>
-
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
             <!-- Fechas importantes -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <div class="border rounded-lg p-2 sm:p-3">
-                    <p class="text-xs text-gray-500">Inicio</p>
-                    <p class="text-sm sm:text-base font-semibold">{{ $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-100 transition">
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        <span class="iconify w-3 h-3" data-icon="mdi:calendar-start"></span>
+                        Fecha de inicio
+                    </p>
+                    <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
-                <div class="border rounded-lg p-2 sm:p-3">
-                    <p class="text-xs text-gray-500">1er Informe</p>
-                    <p class="text-sm sm:text-base font-semibold">{{ $practica->fecha_limite_parcial ? \Carbon\Carbon::parse($practica->fecha_limite_parcial)->format('d/m/Y') : 'No definida' }}</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-100 transition">
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        <span class="iconify w-3 h-3" data-icon="mdi:file-document"></span>
+                        Primer informe disponible
+                    </p>
+                    <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_parcial ? \Carbon\Carbon::parse($practica->fecha_limite_parcial)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
-                <div class="border rounded-lg p-2 sm:p-3">
-                    <p class="text-xs text-gray-500">2do Informe</p>
-                    <p class="text-sm sm:text-base font-semibold">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-100 transition">
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        <span class="iconify w-3 h-3" data-icon="mdi:file-document-multiple"></span>
+                        Segundo informe disponible
+                    </p>
+                    <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
-                <div class="border rounded-lg p-2 sm:p-3">
-                    <p class="text-xs text-gray-500">Finalización</p>
-                    <p class="text-sm sm:text-base font-semibold">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-100 transition">
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        <span class="iconify w-3 h-3" data-icon="mdi:calendar-end"></span>
+                        Fecha de finalización
+                    </p>
+                    <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                 </div>
             </div>
 
@@ -109,11 +144,12 @@
                 
                 <div class="overflow-x-auto">
                     <div class="md:min-w-full">
-                        <!-- Encabezados desktop -->
+                        <!-- Encabezados -->
                         <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 bg-gray-100 rounded-t-lg text-xs font-semibold text-gray-600 mb-2">
                             <div class="col-span-6">Documento</div>
                             <div class="col-span-3">Estado</div>
-                            <div class="col-span-3">Acciones</div>
+                            <div class="col-span-2">Descarga</div>
+                            <div class="col-span-1 text-right">Acciones</div>
                         </div>
                         
                         <div class="space-y-2">
@@ -136,13 +172,49 @@
                                         $estaSubido = $practica->$campo ?? false;
                                         $doc = null;
                                     }
+                                    
+                                    // Obtener comentarios para mostrar en el tooltip
+                                    $comentariosTooltip = collect();
+                                    if ($config['tipo'] == 'admin' && $doc) {
+                                        $comentariosTooltip = $doc->comentarios()->orderBy('created_at', 'desc')->get();
+                                    } elseif ($config['tipo'] == 'informe') {
+                                        if ($nombre == 'Primer Informe de Actividades') {
+                                            $tiposComentarios = ['estudiante_primer_informe', 'admin_primer_informe'];
+                                        } else {
+                                            $tiposComentarios = ['estudiante_segundo_informe', 'admin_segundo_informe'];
+                                        }
+                                        $comentariosTooltip = \App\Models\Comentario::where('comentable_type', 'App\Models\Practica')
+                                            ->where('comentable_id', $practica->id)
+                                            ->whereIn('tipo', $tiposComentarios)
+                                            ->orderBy('created_at', 'desc')
+                                            ->get();
+                                    }
+                                    
+                                    $tieneComentarios = $comentariosTooltip->count() > 0;
+                                    $comentariosNoLeidos = 0;
+                                    foreach($comentariosTooltip as $c) {
+                                        if($c->tipo == 'admin' && !$c->leido) {
+                                            $comentariosNoLeidos++;
+                                        }
+                                    }
+                                    
+                                    $tiposParaMarcar = [];
+                                    if ($config['tipo'] == 'admin' && $doc) {
+                                        $tiposParaMarcar = ['admin'];
+                                    } elseif ($config['tipo'] == 'informe') {
+                                        if ($nombre == 'Primer Informe de Actividades') {
+                                            $tiposParaMarcar = ['admin_primer_informe'];
+                                        } else {
+                                            $tiposParaMarcar = ['admin_segundo_informe'];
+                                        }
+                                    }
                                 @endphp
                                 
-                                <div class="bg-gray-50 rounded-lg">
-                                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
+                                <div class="bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+                                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start md:items-center p-3">
                                         <!-- Nombre -->
                                         <div class="flex items-center gap-2 md:col-span-6">
-                                            <span class="iconify w-5 h-5 text-gray-500 flex-shrink-0" data-icon="mdi:file-pdf-box"></span>
+                                            <span class="iconify w-5 h-5 text-red-500 flex-shrink-0" data-icon="mdi:file-pdf-box"></span>
                                             <span class="font-medium text-sm">{{ $nombre }}</span>
                                         </div>
                                         
@@ -158,141 +230,182 @@
                                                 @endphp
                                                 
                                                 @if($validado)
-                                                    <span class="flex items-center gap-1 text-green-600 text-sm">
-                                                        <span class="iconify w-4 h-4" data-icon="mdi:check-decagram"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
                                                         Validado
                                                     </span>
                                                 @elseif($estaSubido)
-                                                    <span class="flex items-center gap-1 text-yellow-600 text-sm">
-                                                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
                                                         Pendiente validación
                                                     </span>
                                                 @else
-                                                    <span class="flex items-center gap-1 text-yellow-600 text-sm">
-                                                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
                                                         No subido
                                                     </span>
                                                 @endif
                                             @else
+                                                {{-- Documentos administrativos --}}
                                                 @if($estaSubido)
                                                     @if($doc && $doc->estatus == 'validado')
-                                                        <span class="flex items-center gap-1 text-green-600 text-sm">
-                                                            <span class="iconify w-4 h-4" data-icon="mdi:check-decagram"></span>
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
                                                             Validado
                                                         </span>
                                                     @elseif($doc && $doc->estatus == 'rechazado')
-                                                        <span class="flex items-center gap-1 text-red-600 text-sm">
-                                                            <span class="iconify w-4 h-4" data-icon="mdi:close-circle"></span>
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
                                                             Rechazado
                                                         </span>
                                                     @else
-                                                        <span class="flex items-center gap-1 text-yellow-600 text-sm">
-                                                            <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
                                                             Pendiente
                                                         </span>
                                                     @endif
                                                 @else
-                                                    <span class="flex items-center gap-1 text-yellow-600 text-sm">
-                                                        <span class="iconify w-4 h-4" data-icon="mdi:clock-outline"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
                                                         No subido
                                                     </span>
                                                 @endif
                                             @endif
                                         </div>
                                         
-                                        <!-- Acciones -->
-                                        <div class="flex flex-wrap items-center gap-2 md:col-span-3">
+                                        <!-- COLUMNA DESCARGA -->
+                                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:col-span-2 w-full md:w-auto">
+                                            @if($nombre == 'Solicitud de Prácticas Profesionales' && $practica->fecha_inicio)
+                                                <a href="{{ route('practicas.word', $practica->id) }}" 
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-md transition w-full sm:w-auto justify-center">
+                                                    <span class="iconify w-4 h-4" data-icon="mdi:download"></span>
+                                                    <span>Descargar</span>
+                                                </a>
+                                            @else
+                                                <span class="text-gray-300 text-xs w-full sm:w-auto text-center">—</span>
+                                            @endif
+                                        </div>
+                                        
+                                        <!-- COLUMNA ACCIONES + COMENTARIOS -->
+                                        <div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 md:col-span-1 w-full md:w-auto">
                                             @if($estaSubido)
                                                 <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
-                                                   class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-500 rounded-md font-semibold text-xs text-white hover:bg-blue-600 transition">
-                                                    <span class="iconify mr-1 w-3 h-3" data-icon="mdi:refresh"></span>
-                                                    Cambiar
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                    <span class="iconify w-3.5 h-3.5" data-icon="mdi:refresh"></span>
+                                                    <span class="hidden sm:inline">Cambiar</span>
                                                 </a>
                                                 
                                                 @if($config['tipo'] == 'admin')
-                                                    <form method="POST" action="{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}" class="inline" 
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
+                                                    <form method="POST" action="{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}" 
+                                                        class="inline" onsubmit="return confirm('¿Estás seguro de eliminar este documento?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
-                                                            <span class="iconify mr-1 w-3 h-3" data-icon="mdi:delete"></span>
-                                                            Eliminar
+                                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                            <span class="hidden sm:inline">Eliminar</span>
                                                         </button>
                                                     </form>
-                                                @else
+                                                @elseif($config['tipo'] == 'informe')
                                                     @php
                                                         $tipoInforme = ($nombre == 'Primer Informe de Actividades') ? 'primero' : 'segundo';
                                                     @endphp
-                                                    <form method="POST" action="{{ route('practicas.eliminar-informe', [$practica->id, $tipoInforme]) }}" class="inline"
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este informe?')">
+                                                    <form method="POST" action="{{ route('practicas.eliminar-informe', [$practica->id, $tipoInforme]) }}" 
+                                                        class="inline" onsubmit="return confirm('¿Estás seguro de eliminar este informe?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">
-                                                            <span class="iconify mr-1 w-3 h-3" data-icon="mdi:delete"></span>
-                                                            Eliminar
+                                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                            <span class="hidden sm:inline">Eliminar</span>
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}" 
+                                                        class="inline" onsubmit="return confirm('¿Estás seguro de eliminar este elemento?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                            <span class="hidden sm:inline">Eliminar</span>
                                                         </button>
                                                     </form>
                                                 @endif
                                             @else
                                                 <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
-                                                   class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white hover:bg-blue-700 transition">
-                                                    <span class="iconify mr-1 w-3 h-3" data-icon="mdi:cloud-upload"></span>
-                                                    Subir
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                    <span class="iconify w-3.5 h-3.5" data-icon="mdi:cloud-upload"></span>
+                                                    <span class="hidden sm:inline">Subir</span>
                                                 </a>
+                                            @endif
+                                            
+                                            <!-- ========================================== -->
+                                            <!-- BOTÓN DE COMENTARIOS CON HOVER (AL FINAL, COMO EN SERVICIO SOCIAL) -->
+                                            <!-- ========================================== -->
+                                            @if($tieneComentarios)
+                                                <div class="relative inline-block group" 
+                                                     data-comentable-type="{{ $config['tipo'] == 'admin' ? 'App\\Models\\Documento' : 'App\\Models\\Practica' }}"
+                                                     data-comentable-id="{{ $config['tipo'] == 'admin' ? ($doc->id ?? 0) : $practica->id }}"
+                                                     data-tipos="{{ json_encode($tiposParaMarcar) }}">
+                                                    <button type="button" 
+                                                            class="comentario-btn inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 transition relative"
+                                                            onclick="marcarComentariosComoLeidos(this)">
+                                                        <span class="iconify w-5 h-5 text-gray-600 group-hover:text-blue-600 transition" 
+                                                              data-icon="mdi:comment-text-outline"></span>
+                                                        
+                                                        @if($comentariosNoLeidos > 0)
+                                                            <span class="badge-notificacion absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                                                                {{ $comentariosNoLeidos }}
+                                                            </span>
+                                                        @endif
+                                                    </button>
+                                                    
+                                                    <!-- Tooltip con comentarios -->
+                                                    <div class="absolute right-0 mt-2 w-64 sm:w-80 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto md:right-0 md:left-auto">
+                                                        <div class="absolute -top-2 right-4 w-3 h-3 bg-white border-l border-t border-gray-200 transform rotate-45 md:right-4"></div>
+                                                        
+                                                        <div class="p-3 max-h-48 overflow-y-auto">
+                                                            <div class="flex items-center justify-between mb-2">
+                                                                <span class="text-xs font-semibold text-gray-700">Comentarios</span>
+                                                                <span class="text-[10px] text-gray-400">{{ $comentariosTooltip->count() }} comentario(s)</span>
+                                                            </div>
+                                                            
+                                                            @foreach($comentariosTooltip->take(5) as $comentario)
+                                                                @php
+                                                                    $esAdmin = str_contains($comentario->tipo, 'admin');
+                                                                    $color = $esAdmin ? 'text-orange-600' : 'text-blue-600';
+                                                                    $icono = $esAdmin ? 'mdi:account-check' : 'mdi:account';
+                                                                    $nombreMostrar = $esAdmin ? 'Administrador' : 'Tú';
+                                                                    $fondo = $esAdmin ? 'bg-orange-50' : 'bg-blue-50';
+                                                                    
+                                                                    $fechaTexto = 'Fecha no disponible';
+                                                                    if ($comentario->created_at) {
+                                                                        $fechaTexto = $comentario->created_at->diffForHumans();
+                                                                    }
+                                                                @endphp
+                                                                <div class="text-xs {{ $color }} flex items-start gap-1.5 py-1.5 px-2 rounded-md {{ $fondo }} mb-1 last:mb-0">
+                                                                    <span class="iconify w-3.5 h-3.5 mt-0.5 flex-shrink-0" data-icon="{{ $icono }}"></span>
+                                                                    <span class="flex-1">
+                                                                        <strong>{{ $nombreMostrar }}:</strong>
+                                                                        {{ \Illuminate\Support\Str::limit($comentario->contenido, 60) }}
+                                                                        <span class="text-gray-400 text-[10px] block">{{ $fechaTexto }}</span>
+                                                                    </span>
+                                                                </div>
+                                                            @endforeach
+                                                            
+                                                            @if($comentariosTooltip->count() > 5)
+                                                                <div class="text-center mt-1">
+                                                                    <span class="text-[10px] text-gray-400">+ {{ $comentariosTooltip->count() - 5 }} más</span>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full opacity-50">
+                                                    <span class="iconify w-4 h-4 text-gray-300" data-icon="mdi:comment-text-outline"></span>
+                                                </span>
                                             @endif
                                         </div>
                                     </div>
-
-                                    <!-- Comentarios -->
-                                    @if($config['tipo'] == 'admin')
-                                        @if($doc && $doc->comentarios && $doc->comentarios->count() > 0)
-                                            <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
-                                                @foreach($doc->comentarios as $comentario)
-                                                    <div class="text-xs {{ $comentario->tipo == 'admin' ? 'text-orange-600' : 'text-blue-600' }} flex items-start gap-1">
-                                                        <span class="iconify w-3 h-3 mt-0.5 flex-shrink-0" 
-                                                            data-icon="{{ $comentario->tipo == 'admin' ? 'mdi:account-check' : 'mdi:account' }}"></span>
-                                                        <span>
-                                                            <strong>{{ $comentario->tipo == 'admin' ? 'Administrador' : 'Tú' }}:</strong>
-                                                            {{ $comentario->contenido }}
-                                                            <span class="text-gray-400 ml-1">({{ $comentario->created_at->diffForHumans() }})</span>
-                                                        </span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    @endif
-
-                                    @if($config['tipo'] == 'informe')
-                                        @php
-                                            $tiposComentarios = $nombre == 'Primer Informe de Actividades' 
-                                                ? ['estudiante_primer_informe', 'admin_primer_informe']
-                                                : ['estudiante_segundo_informe', 'admin_segundo_informe'];
-                                            
-                                            $informeComentarios = \App\Models\Comentario::where('comentable_type', 'App\Models\Practica')
-                                                ->where('comentable_id', $practica->id)
-                                                ->whereIn('tipo', $tiposComentarios)
-                                                ->orderBy('created_at', 'asc')
-                                                ->get();
-                                        @endphp
-
-                                        @if($informeComentarios->count() > 0)
-                                            <div class="px-3 pb-3 pt-1 border-t border-gray-200 mt-2 space-y-2">
-                                                @foreach($informeComentarios as $comentario)
-                                                    @php
-                                                        $esAdmin = str_contains($comentario->tipo, 'admin');
-                                                    @endphp
-                                                    <div class="text-xs {{ $esAdmin ? 'text-orange-600' : 'text-blue-600' }} flex items-start gap-1">
-                                                        <span class="iconify w-3 h-3 mt-0.5 flex-shrink-0" data-icon="{{ $esAdmin ? 'mdi:account-check' : 'mdi:account' }}"></span>
-                                                        <span>
-                                                            <strong>{{ $esAdmin ? 'Administrador' : 'Tú' }}:</strong>
-                                                            {{ $comentario->contenido }}
-                                                            <span class="text-gray-400 ml-1">({{ $comentario->created_at->diffForHumans() }})</span>
-                                                        </span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -301,12 +414,111 @@
             </div>
         </div>
     @else
-        <div class="bg-white p-6 rounded shadow text-center">
-            <p class="text-gray-500">No hay registro de Prácticas Profesionales para este usuario.</p>
-            <a href="{{ route('solicitud-practicas.create') }}" class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <div class="bg-white p-8 rounded-xl shadow-lg text-center border border-gray-100">
+            <span class="iconify w-16 h-16 text-gray-300 mx-auto mb-4" data-icon="mdi:file-document-outline"></span>
+            <p class="text-gray-600 font-medium">No hay registro de Prácticas Profesionales para este usuario.</p>
+            <p class="text-gray-400 text-sm mt-1">Completa el formulario de solicitud para comenzar.</p>
+            <a href="{{ route('solicitud-practicas.create') }}" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition">
+                <span class="iconify w-4 h-4" data-icon="mdi:plus-circle"></span>
                 Solicitar Prácticas Profesionales
             </a>
         </div>
     @endif
 </div>
+
+<!-- ========================================== -->
+<!-- JAVASCRIPT PARA MARCAR COMENTARIOS COMO LEÍDOS -->
+<!-- ========================================== -->
+<script>
+function marcarComentariosComoLeidos(button) {
+    const container = button.closest('.group');
+    if (!container) return;
+    
+    const comentableType = container.dataset.comentableType;
+    const comentableId = container.dataset.comentableId;
+    const tipos = JSON.parse(container.dataset.tipos || '[]');
+    
+    if (!tipos.length || !comentableId) return;
+    
+    const data = {
+        comentable_type: comentableType,
+        comentable_id: comentableId,
+        tipos: tipos,
+        _token: '{{ csrf_token() }}'
+    };
+    
+    fetch('{{ route("comentarios.marcar-leidos") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': data._token
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const badge = container.querySelector('.badge-notificacion');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error al marcar comentarios como leídos:', error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.group').forEach(function(container) {
+        container.addEventListener('mouseenter', function() {
+            const button = container.querySelector('.comentario-btn');
+            if (button) {
+                const badge = container.querySelector('.badge-notificacion');
+                if (badge && badge.style.display !== 'none') {
+                    marcarComentariosComoLeidos(button);
+                }
+            }
+        });
+    });
+});
+</script>
+
+<!-- ========================================== -->
+<!-- ESTILOS ADICIONALES PARA EL TOOLTIP -->
+<!-- ========================================== -->
+<style>
+    .group .max-h-48::-webkit-scrollbar {
+        width: 3px;
+    }
+    .group .max-h-48::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .group .max-h-48::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 10px;
+    }
+    .group .max-h-48::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+    
+    .badge-notificacion {
+        transition: all 0.3s ease;
+    }
+    
+    @media (max-width: 640px) {
+        .group .absolute {
+            right: auto !important;
+            left: 0 !important;
+        }
+        .group .absolute .w-64 {
+            width: 280px !important;
+        }
+        .group .absolute .w-3 {
+            right: auto !important;
+            left: 12px !important;
+        }
+    }
+</style>
 @endsection

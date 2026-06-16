@@ -71,6 +71,27 @@ class PracticaController extends Controller
         return view('practicas.index', compact('practica', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
+    /**
+     * Mostrar formulario para subir reporte parcial (Primer Informe)
+     */
+    public function mostrarFormularioReporteParcial($id)
+    {
+        $practica = Practica::findOrFail($id);
+        
+        // Verificar que el usuario sea el dueño
+        if ($practica->user_id !== Auth::id()) {
+            abort(403);
+        }
+        
+        // Validar fecha límite
+        if (!$practica->fecha_limite_parcial || now()->lt($practica->fecha_limite_parcial)) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($practica->fecha_limite_parcial)->format('d/m/Y'));
+        }
+        
+        return view('practicas.subir_reporte_parcial', compact('practica'));
+    }
+
     // Procesar la subida del reporte parcial
     public function subirReporteParcial(Request $request, $id)
     {
