@@ -38,6 +38,21 @@
     @endif
 
     <!-- ========================================== -->
+    <!-- ALERTA DE PRÓRROGA (si aplica) -->
+    <!-- ========================================== -->
+    @if(session('warning'))
+        <div class="bg-amber-50 border-l-4 border-amber-500 text-amber-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" data-icon="mdi:alert"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('warning') }}</p>
+            </div>
+            <button type="button" class="text-amber-500 hover:text-amber-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
+        </div>
+    @endif
+
+    <!-- ========================================== -->
     <!-- FORMULARIO - ESTILO HOJA / CREMA -->
     <!-- ========================================== -->
     <form method="POST" action="{{ route('servicio-social.guardar-reporte-final', $servicioSocial->id) }}" enctype="multipart/form-data" 
@@ -46,6 +61,33 @@
         @csrf
 
         <div class="p-4 sm:p-8 space-y-6">
+            <!-- ========== INFORMACIÓN DE FECHAS ========== -->
+            <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
+                <div class="flex items-start gap-3">
+                    <span class="iconify w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" data-icon="mdi:calendar-clock"></span>
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            <span class="font-semibold">Fecha límite para subir:</span>
+                            {{ $fechaFormateada }}
+                        </p>
+                        @php
+                            $fechaLimiteCarbon = \Carbon\Carbon::parse($fechaLimite);
+                            $fechaInicioSubida = $fechaLimiteCarbon->copy()->subDays(5);
+                            $fechaFinSubida = $fechaLimiteCarbon->copy()->addDays(5);
+                        @endphp
+                        <p class="text-xs text-gray-500 mt-1">
+                            <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:information-outline"></span>
+                            Puedes subir este informe desde el <strong>{{ $fechaInicioSubida->format('d/m/Y') }}</strong> 
+                            hasta el <strong>{{ $fechaFinSubida->format('d/m/Y') }}</strong>
+                        </p>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:clock-outline"></span>
+                            <span class="text-amber-600">⚠️</span> Se permite subir 5 días antes y hasta 5 días después de la fecha límite.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- ========== INFORMACIÓN DEL PROGRESO ========== -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">

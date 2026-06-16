@@ -66,7 +66,7 @@ class ServicioSocialController extends Controller
         return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
-    // Mostrar formulario para subir reporte parcial
+    // Mostrar formulario para subir reporte parcial (Primer Informe)
     public function mostrarFormularioReporteParcial($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
@@ -75,15 +75,44 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        if (!$servicioSocial->fecha_limite_primer_informe || now()->lt($servicioSocial->fecha_limite_primer_informe)) {
+        $fechaLimite = $servicioSocial->fecha_limite_primer_informe;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        
+        // Si no hay fecha límite definida
+        if (!$fechaLimite) {
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_primer_informe)->format('d/m/Y'));
+                ->with('error', 'No hay fecha límite definida para el Primer Informe. Contacta al administrador.');
         }
 
-        return view('servicio_social.subir_reporte_parcial', compact('servicioSocial'));
+        // Calcular días restantes (positivo = días faltantes, negativo = días después)
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        // Verificar si está dentro del período permitido (-5 a +5 días)
+        if ($diasRestantes > 5) {
+            // Falta más de 5 días
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        if ($diasRestantes < -5) {
+            // Ya pasó más de 5 días después de la fecha límite
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'El plazo para subir el Primer Informe venció el ' . $fechaFormateada . '. Ya no es posible subirlo.');
+        }
+
+        // Si está en prórroga (1-5 días después), mostrar advertencia
+        if ($diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', '⚠️ El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
+        }
+
+        // Si está dentro del período permitido
+        return view('servicio_social.subir_reporte_parcial', compact('servicioSocial', 'fechaLimite', 'fechaFormateada'));
     }
 
-    // Procesar la subida del reporte parcial
+    // Procesar la subida del reporte parcial (Primer Informe)
     public function subirReporteParcial(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
@@ -92,11 +121,36 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        if (!$servicioSocial->fecha_limite_primer_informe || now()->lt($servicioSocial->fecha_limite_primer_informe)) {
+        $fechaLimite = $servicioSocial->fecha_limite_primer_informe;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+
+        if (!$fechaLimite) {
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Primer Informe.');
+                ->with('error', 'No hay fecha límite definida para el Primer Informe.');
         }
 
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        // Verificar si está dentro del período permitido (-5 a +5 días)
+        if ($diasRestantes > 5) {
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        if ($diasRestantes < -5) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'El plazo para subir el Primer Informe venció el ' . $fechaFormateada . '. Ya no es posible subirlo.');
+        }
+
+        // Si está en prórroga, mostrar advertencia pero permitir
+        if ($diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', '⚠️ El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
+        }
+
+        // Validar archivo
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
@@ -138,7 +192,7 @@ class ServicioSocialController extends Controller
             ->with('success', 'Primer Informe subido correctamente.');
     }
 
-    // Mostrar formulario para subir reporte final
+    // Mostrar formulario para subir reporte final (Segundo Informe)
     public function mostrarFormularioReporteFinal($id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
@@ -147,15 +201,37 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        if (!$servicioSocial->fecha_limite_segundo_informe || now()->lt($servicioSocial->fecha_limite_segundo_informe)) {
+        $fechaLimite = $servicioSocial->fecha_limite_segundo_informe;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        
+        if (!$fechaLimite) {
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y'));
+                ->with('error', 'No hay fecha límite definida para el Segundo Informe. Contacta al administrador.');
         }
 
-        return view('servicio_social.subir_reporte_final', compact('servicioSocial'));
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        if ($diasRestantes > 5) {
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        if ($diasRestantes < -5) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'El plazo para subir el Segundo Informe venció el ' . $fechaFormateada . '. Ya no es posible subirlo.');
+        }
+
+        if ($diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', '⚠️ El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
+        }
+
+        return view('servicio_social.subir_reporte_final', compact('servicioSocial', 'fechaLimite', 'fechaFormateada'));
     }
 
-    // Procesar la subida del reporte final
+    // Procesar la subida del reporte final (Segundo Informe)
     public function subirReporteFinal(Request $request, $id)
     {
         $servicioSocial = ServicioSocial::findOrFail($id);
@@ -164,9 +240,31 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        if (!$servicioSocial->fecha_limite_segundo_informe || now()->lt($servicioSocial->fecha_limite_segundo_informe)) {
+        $fechaLimite = $servicioSocial->fecha_limite_segundo_informe;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+
+        if (!$fechaLimite) {
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Segundo Informe.');
+                ->with('error', 'No hay fecha límite definida para el Segundo Informe.');
+        }
+
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        if ($diasRestantes > 5) {
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        if ($diasRestantes < -5) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'El plazo para subir el Segundo Informe venció el ' . $fechaFormateada . '. Ya no es posible subirlo.');
+        }
+
+        if ($diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', '⚠️ El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
         $request->validate([
