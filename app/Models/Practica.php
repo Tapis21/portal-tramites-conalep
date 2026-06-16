@@ -16,11 +16,18 @@ class Practica extends Model
         'empresa_id',
         'grado_academico_id',
         'nombre_persona_carta',
+        'cargo_persona_carta',
+        'nombre_jefe_inmediato',
+        'cargo_jefe_inmediato',
+        'grado_academico_jefe_id',
+        'horario_id',
         'area_asignada',
         'apoyo_estudiante',
         'fecha_inicio',
         'fecha_limite_parcial',
         'fecha_limite_final',
+        'horas_requeridas',
+        'horas_completadas',
         'reporte_parcial_subido',
         'reporte_parcial_validado',
         'reporte_final_subido',
@@ -48,6 +55,16 @@ class Practica extends Model
     public function comentarios()
     {
         return $this->morphMany(Comentario::class, 'comentable');
+    }
+
+    public function gradoAcademicoJefe()
+    {
+        return $this->belongsTo(GradoAcademico::class, 'grado_academico_jefe_id');
+    }
+
+    public function horario()
+    {
+        return $this->belongsTo(Horario::class);
     }
 
     /**
