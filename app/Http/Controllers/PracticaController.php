@@ -11,6 +11,7 @@ use App\Models\TipoDocumento;
 
 use App\Models\Comentario;
 
+use PhpOffice\PhpWord\TemplateProcessor;
 use Carbon\Carbon;
 
 class PracticaController extends Controller
@@ -663,5 +664,64 @@ class PracticaController extends Controller
         }
 
         return redirect()->route('practicas.index')->with('success', $mensaje);
+    }
+
+    public function descargarWordRelleno($id)
+    {
+        $practica = Practica::with('user', 'empresa', 'gradoAcademico', 'horario', 'gradoAcademicoJefe')->findOrFail($id);
+        
+        if ($practica->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        Carbon::setLocale('es');
+        $user = $practica->user;
+        
+        $variables = [
+            'nombre_completo' => trim($user->name . '' . $user->apellidos),
+            'nombre' => $user->name,
+            'apellidos' => $user->apellidos,
+            'matricula' => $user->matricula,
+            'grupo' => $user->grupo ?? '',
+            'carrera' => $user->carrera,
+            'semestre' => $user->semestre,
+            'turno' => $user->nombre_turno,
+            'generacion' => $user->nombre_periodo_actual,
+            'fecha_inicio' => $practica->fecha_inicio ? Carbon::parse($practica->fecha_inicio)->translatedFormat('d \d\e F \d\e Y') : '',
+            'fecha_finalizacion' => $practica->fecha_limite_final ? Carbon::parse($practica->fecha_limite_final)->translatedFormat('d \d\e F \d\e Y') : '',
+            'horario' => $practica->horario ? $practica->horario->hora_inicio . ' - ' . $practica->horario->hora_fin : '',
+            'empresa' => $practica->empresa->nombre ?? '',
+            'grado_academico' => $practica->gradoAcademico->abreviatura ?? '',
+            'nombre_persona_carta' => $practica->nombre_persona_carta,
+            'cargo_persona_carta' => $practica->cargo_persona_carta ?? '',
+            'grado_academico_jefe' => $practica->gradoAcademicoJefe->abreviatura ?? '',
+            'nombre_jefe_inmediato' => $practica->nombre_jefe_inmediato ?? '',
+            'cargo_jefe_inmediato' => $practica->cargo_jefe_inmediato ?? '',
+            'area_asignada' => $practica->area_asignada,
+            'apoyo_estudiante' => $practica->apoyo_estudiante,
+        ];
+
+        // Plantilla específica para prácticas
+        $templatePath = storage_path('app/templates/solicitud_practicas_plantilla.docx');
+        
+        if (!file_exists($templatePath)) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'No se encontró la plantilla de solicitud.');
+        }
+        
+        $templateProcessor = new TemplateProcessor($templatePath);
+
+        foreach ($variables as $key => $value) {
+            $templateProcessor->setValue($key, $value ?? '');
+        }
+
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $tempPath = storage_path('app/temp/solicitud_practicas_' . $user->matricula . '.docx');
+        $templateProcessor->saveAs($tempPath);
+
+        return response()->download($tempPath, 'solicitud_practicas_' . $user->matricula . '.docx')->deleteFileAfterSend(true);
     }
 }
