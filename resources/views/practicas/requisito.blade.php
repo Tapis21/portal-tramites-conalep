@@ -1,28 +1,85 @@
 @extends('layouts.app')
 
 @section('content')
-<div style="margin-top: 25vh;">
-    <div class="max-w-2xl mx-auto px-4">
+<div class="min-h-[60vh] flex items-center justify-center px-4 sm:px-6 py-10">
+    <div class="max-w-2xl w-full">
+
         <!-- Botón Atrás (solo visible en móvil) -->
         <div class="sm:hidden mb-4">
-            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition">
-                <span class="iconify w-5 h-5" data-icon="mdi:arrow-left"></span>
+            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 text-green-700 hover:text-green-900 transition text-sm font-medium">
+                <span class="iconify w-5 h-5" data-icon="mdi:arrow-left-circle"></span>
                 Volver al inicio
             </a>
         </div>
 
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-md">
-            <div class="flex items-center gap-3 mb-4">
-                <span class="iconify w-8 h-8 text-yellow-600" data-icon="mdi:alert-circle"></span>
-                <h2 class="text-xl font-bold text-yellow-800">Requisito no cumplido</h2>
+        <!-- ========================================== -->
+        <!-- TARJETA PRINCIPAL - ESTILO CONALEP -->
+        <!-- ========================================== -->
+        <div class="bg-[#f5f0e8] rounded-xl shadow-xl border border-[#d4c9b8] overflow-hidden" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+            
+            <!-- Cabecera con icono -->
+            <div class="bg-amber-50/80 border-b border-[#d4c9b8] px-6 sm:px-8 py-5 flex items-center gap-4">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-amber-600" data-icon="mdi:alert-circle"></span>
+                </div>
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-amber-800">Requisito no cumplido</h2>
+                    <p class="text-xs sm:text-sm text-amber-600/80">Acceso restringido</p>
+                </div>
             </div>
-            <p class="text-gray-700 mb-4">
-                Para acceder al módulo de <strong>Prácticas Profesionales</strong>, primero debes completar y liberar tu <strong>Servicio Social</strong>.
-            </p>
-            <a href="{{ route('servicio-social.index') }}" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                <span class="iconify w-5 h-5" data-icon="mdi:hand-heart"></span>
-                Ir a mi Servicio Social
-            </a>
+
+            <!-- Cuerpo -->
+            <div class="px-6 sm:px-8 py-6 sm:py-8 space-y-5">
+                <!-- Mensaje principal -->
+                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                    <div class="flex items-start gap-3">
+                        <span class="iconify w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
+                        <div>
+                            <p class="text-sm sm:text-base text-gray-700 leading-relaxed">
+                                Para acceder al módulo de <strong class="text-amber-700">Prácticas Profesionales</strong>, 
+                                primero debes completar y liberar tu <strong class="text-green-700">Servicio Social</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pasos a seguir -->
+                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span class="iconify w-4 h-4" data-icon="mdi:list-check"></span>
+                        ¿Qué debes hacer?
+                    </p>
+                    <ul class="space-y-2.5 text-sm text-gray-700">
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-amber-600 text-xs font-bold">1</span>
+                            </span>
+                            <span>Completa todos los documentos de tu <strong>Servicio Social</strong></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-amber-600 text-xs font-bold">2</span>
+                            </span>
+                            <span>Espera la <strong>validación</strong> y <strong>liberación</strong> del trámite</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">3</span>
+                            </span>
+                            <span>Una vez liberado, podrás acceder a <strong>Prácticas Profesionales</strong></span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Botón de acción -->
+                <div class="pt-2">
+                    <a href="{{ route('servicio-social.index') }}" 
+                       class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-green-700 hover:bg-green-800 text-white text-sm font-bold rounded-lg transition shadow-md hover:shadow-lg border border-green-800">
+                        <span class="iconify w-5 h-5" data-icon="mdi:hand-heart"></span>
+                        Ir a mi Servicio Social
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

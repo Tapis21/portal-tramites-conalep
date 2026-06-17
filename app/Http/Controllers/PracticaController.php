@@ -71,43 +71,72 @@ class PracticaController extends Controller
         return view('practicas.index', compact('practica', 'comentariosPorDocumento', 'comentariosPorInforme'));
     }
 
-    /**
-     * Mostrar formulario para subir reporte parcial (Primer Informe)
-     */
+    // Mostrar formulario para subir reporte parcial (Primer Informe - 180h)
     public function mostrarFormularioReporteParcial($id)
     {
         $practica = Practica::findOrFail($id);
-        
-        // Verificar que el usuario sea el dueño
+
         if ($practica->user_id !== Auth::id()) {
             abort(403);
         }
+
+        $fechaLimite = $practica->fecha_limite_parcial;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        // Validar fecha límite
-        if (!$practica->fecha_limite_parcial || now()->lt($practica->fecha_limite_parcial)) {
-            return redirect()->route('practicas.index')
-                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($practica->fecha_limite_parcial)->format('d/m/Y'));
+        // ========== CALCULAR HORAS COMPLETADAS ==========
+        // CONVERTIR a Carbon antes de usar
+        $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
+        $horasCompletadas = 0;
+        
+        if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
+            $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
+            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
+            $horasCompletadas = min($horasCompletadas, 360); // No puede superar 360
         }
         
-        return view('practicas.subir_reporte_parcial', compact('practica'));
+        // Variables para la vista
+        $estaVencido = false;
+        $diasRestantes = null;
+        
+        if ($fechaLimite) {
+            $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+            $estaVencido = $diasRestantes < -5; // Más de 5 días después
+        }
+
+        // Si está en prórroga (1-5 días después), mostrar advertencia
+        if ($diasRestantes !== null && $diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
+        }
+
+        // Si está muy adelantado (>5 días antes), mostrar advertencia informativa
+        if ($diasRestantes !== null && $diasRestantes > 5) {
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            session()->flash('info', 'La fecha límite para subir es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        // SIEMPRE permitir ver el formulario
+        return view('practicas.subir_reporte_parcial', compact('practica', 'fechaLimite', 'fechaFormateada', 'estaVencido', 'diasRestantes', 'horasCompletadas'));
     }
 
-    // Procesar la subida del reporte parcial
+    // Procesar la subida del reporte parcial (Primer Informe - 180h)
     public function subirReporteParcial(Request $request, $id)
     {
         $practica = Practica::findOrFail($id);
-        if ($practica->user_id !== Auth::id()) abort(403);
 
-        if (!$practica->fecha_limite_parcial || now()->lt($practica->fecha_limite_parcial)) {
-            return redirect()->route('practicas.index')
-                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . optional($practica->fecha_limite_parcial)->format('d/m/Y'));
+        if ($practica->user_id !== Auth::id()) {
+            abort(403);
         }
 
+        // ELIMINAR TODAS LAS VALIDACIONES DE FECHA
+        // Solo validar el archivo y comentario
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
+        // Si existe archivo anterior, eliminarlo
         if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
             unlink(storage_path('app/public/' . $practica->archivo_parcial));
         }
@@ -144,29 +173,61 @@ class PracticaController extends Controller
             ->with('success', 'Primer Informe subido correctamente.');
     }
 
+    // Mostrar formulario para subir reporte final (Segundo Informe - 360h)
     public function mostrarFormularioReporteFinal($id)
     {
         $practica = Practica::findOrFail($id);
-        if ($practica->user_id !== Auth::id()) abort(403);
 
-        if (!$practica->fecha_limite_final || now()->lt($practica->fecha_limite_final)) {
-            return redirect()->route('practicas.index')
-                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . optional($practica->fecha_limite_final)->format('d/m/Y'));
+        if ($practica->user_id !== Auth::id()) {
+            abort(403);
         }
 
-        return view('practicas.subir_reporte_final', compact('practica'));
+        $fechaLimite = $practica->fecha_limite_final;
+        $fechaHoy = now()->startOfDay();
+        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        
+        // ========== CALCULAR HORAS COMPLETADAS ==========
+        // CONVERTIR a Carbon antes de usar
+        $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
+        $horasCompletadas = 0;
+        
+        if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
+            $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
+            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
+            $horasCompletadas = min($horasCompletadas, 360); // No puede superar 360
+        }
+        
+        $estaVencido = false;
+        $diasRestantes = null;
+        
+        if ($fechaLimite) {
+            $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+            $estaVencido = $diasRestantes < -5;
+        }
+
+        if ($diasRestantes !== null && $diasRestantes < 0 && $diasRestantes >= -5) {
+            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
+        }
+
+        if ($diasRestantes !== null && $diasRestantes > 5) {
+            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            session()->flash('info', 'La fecha límite para subir es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        return view('practicas.subir_reporte_final', compact('practica', 'fechaLimite', 'fechaFormateada', 'estaVencido', 'diasRestantes', 'horasCompletadas'));
     }
 
+    // Procesar la subida del reporte final (Segundo Informe - 360h)
     public function subirReporteFinal(Request $request, $id)
     {
         $practica = Practica::findOrFail($id);
-        if ($practica->user_id !== Auth::id()) abort(403);
 
-        if (!$practica->fecha_limite_final || now()->lt($practica->fecha_limite_final)) {
-            return redirect()->route('practicas.index')
-                ->with('error', 'Aún no puedes subir el Segundo Informe.');
+        if ($practica->user_id !== Auth::id()) {
+            abort(403);
         }
 
+        // ELIMINAR TODAS LAS VALIDACIONES DE FECHA
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',

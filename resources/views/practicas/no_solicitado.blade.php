@@ -1,15 +1,86 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-2xl mx-auto mt-40 px-4">
-    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-bold text-yellow-800 mb-2">Aún no has solicitado Prácticas Profesionales</h2>
-        <p class="text-gray-700 mb-4">
-            Completa el formulario de solicitud para comenzar.
-        </p>
-        <a href="{{ route('solicitud-practicas.create') }}" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-            Ir al formulario
-        </a>
+<div class="min-h-[60vh] flex items-center justify-center px-4 sm:px-6 py-10">
+    <div class="max-w-2xl w-full">
+
+        <!-- Botón Atrás (solo visible en móvil) -->
+        <div class="sm:hidden mb-4">
+            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 text-green-700 hover:text-green-900 transition text-sm font-medium">
+                <span class="iconify w-5 h-5" data-icon="mdi:arrow-left-circle"></span>
+                Volver al inicio
+            </a>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TARJETA PRINCIPAL - ESTILO CONALEP -->
+        <!-- ========================================== -->
+        <div class="bg-[#f5f0e8] rounded-xl shadow-xl border border-[#d4c9b8] overflow-hidden" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+            
+            <!-- Cabecera con icono -->
+            <div class="bg-blue-50/80 border-b border-[#d4c9b8] px-6 sm:px-8 py-5 flex items-center gap-4">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-blue-600" data-icon="mdi:file-document-outline"></span>
+                </div>
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-blue-800">Sin solicitud registrada</h2>
+                    <p class="text-xs sm:text-sm text-blue-600/80">Prácticas Profesionales</p>
+                </div>
+            </div>
+
+            <!-- Cuerpo -->
+            <div class="px-6 sm:px-8 py-6 sm:py-8 space-y-5">
+                <!-- Mensaje principal -->
+                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                    <div class="flex items-start gap-3">
+                        <span class="iconify w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
+                        <div>
+                            <p class="text-sm sm:text-base text-gray-700 leading-relaxed">
+                                Aún no has solicitado <strong class="text-blue-700">Prácticas Profesionales</strong>.
+                                Completa el formulario de solicitud para comenzar tu trámite.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pasos a seguir -->
+                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span class="iconify w-4 h-4" data-icon="mdi:list-check"></span>
+                        ¿Cómo empezar?
+                    </p>
+                    <ul class="space-y-2.5 text-sm text-gray-700">
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-blue-600 text-xs font-bold">1</span>
+                            </span>
+                            <span>Completa el formulario de <strong>solicitud</strong></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-blue-600 text-xs font-bold">2</span>
+                            </span>
+                            <span>Sube los <strong>documentos requeridos</strong></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">3</span>
+                            </span>
+                            <span>Espera la <strong>validación</strong> y <strong>liberación</strong> del trámite</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Botón de acción -->
+                <div class="pt-2">
+                    <a href="{{ route('solicitud-practicas.create') }}" 
+                       class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-green-700 hover:bg-green-800 text-white text-sm font-bold rounded-lg transition shadow-md hover:shadow-lg border border-green-800">
+                        <span class="iconify w-5 h-5" data-icon="mdi:plus-circle"></span>
+                        Ir al formulario
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection

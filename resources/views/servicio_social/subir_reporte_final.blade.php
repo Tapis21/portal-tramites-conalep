@@ -18,6 +18,36 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- ALERTA DE PRÓRROGA (si aplica) -->
+    <!-- ========================================== -->
+    @if(session('warning'))
+        <div class="bg-amber-50 border-l-4 border-amber-500 text-amber-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" data-icon="mdi:alert"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('warning') }}</p>
+            </div>
+            <button type="button" class="text-amber-500 hover:text-amber-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
+        </div>
+    @endif
+
+    <!-- ========================================== -->
+    <!-- ALERTA INFORMATIVA (si aplica - más de 5 días antes) -->
+    <!-- ========================================== -->
+    @if(session('info'))
+        <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-blue-500" data-icon="mdi:information"></span>
+            <div class="flex-1">
+                <p class="text-sm font-medium">{{ session('info') }}</p>
+            </div>
+            <button type="button" class="text-blue-500 hover:text-blue-700 transition cursor-pointer" onclick="this.parentElement.remove()">
+                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+            </button>
+        </div>
+    @endif
+
+    <!-- ========================================== -->
     <!-- ALERTAS DE ERRORES MEJORADAS -->
     <!-- ========================================== -->
     @if ($errors->any())
@@ -38,21 +68,6 @@
     @endif
 
     <!-- ========================================== -->
-    <!-- ALERTA DE PRÓRROGA (si aplica) -->
-    <!-- ========================================== -->
-    @if(session('warning'))
-        <div class="bg-amber-50 border-l-4 border-amber-500 text-amber-700 p-4 rounded-md mb-4 flex items-start gap-3 shadow-sm" role="alert">
-            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" data-icon="mdi:alert"></span>
-            <div class="flex-1">
-                <p class="text-sm font-medium">{{ session('warning') }}</p>
-            </div>
-            <button type="button" class="text-amber-500 hover:text-amber-700 transition cursor-pointer" onclick="this.parentElement.remove()">
-                <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
-            </button>
-        </div>
-    @endif
-
-    <!-- ========================================== -->
     <!-- FORMULARIO - ESTILO HOJA / CREMA -->
     <!-- ========================================== -->
     <form method="POST" action="{{ route('servicio-social.guardar-reporte-final', $servicioSocial->id) }}" enctype="multipart/form-data" 
@@ -62,40 +77,99 @@
 
         <div class="p-4 sm:p-8 space-y-6">
             <!-- ========== INFORMACIÓN DE FECHAS ========== -->
-            <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
+            <div class="bg-white/70 rounded-lg p-4 border {{ $estaVencido ? 'border-red-300' : 'border-[#d4c9b8]' }}">
                 <div class="flex items-start gap-3">
-                    <span class="iconify w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" data-icon="mdi:calendar-clock"></span>
+                    @if($estaVencido)
+                        <span class="iconify w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" data-icon="mdi:alert-circle"></span>
+                    @else
+                        <span class="iconify w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" data-icon="mdi:calendar-clock"></span>
+                    @endif
                     <div>
-                        <p class="text-sm text-gray-700">
-                            <span class="font-semibold">Fecha límite para subir:</span>
-                            {{ $fechaFormateada }}
-                        </p>
-                        @php
-                            $fechaLimiteCarbon = \Carbon\Carbon::parse($fechaLimite);
-                            $fechaInicioSubida = $fechaLimiteCarbon->copy()->subDays(5);
-                            $fechaFinSubida = $fechaLimiteCarbon->copy()->addDays(5);
-                        @endphp
-                        <p class="text-xs text-gray-500 mt-1">
-                            <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:information-outline"></span>
-                            Puedes subir este informe desde el <strong>{{ $fechaInicioSubida->format('d/m/Y') }}</strong> 
-                            hasta el <strong>{{ $fechaFinSubida->format('d/m/Y') }}</strong>
-                        </p>
-                        <p class="text-xs text-gray-400 mt-0.5">
-                            <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:clock-outline"></span>
-                            <span class="text-amber-600">⚠️</span> Se permite subir 5 días antes y hasta 5 días después de la fecha límite.
-                        </p>
+                        @if($estaVencido)
+                            <p class="text-sm text-red-700 font-semibold">
+                                El plazo para subir este informe venció el {{ $fechaFormateada }}
+                            </p>
+                            <p class="text-xs text-red-500 mt-1">
+                                <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:information-outline"></span>
+                                Aunque el plazo ya venció, aún puedes subir el informe. Será marcado como <strong>"Subido en destiempo"</strong>.
+                            </p>
+                        @else
+                            <p class="text-sm text-gray-700">
+                                <span class="font-semibold">Fecha límite para subir:</span>
+                                {{ $fechaFormateada }}
+                            </p>
+                            @php
+                                $fechaLimiteCarbon = \Carbon\Carbon::parse($fechaLimite);
+                                $fechaInicioSubida = $fechaLimiteCarbon->copy()->subDays(5);
+                                $fechaFinSubida = $fechaLimiteCarbon->copy()->addDays(5);
+                            @endphp
+                            <p class="text-xs text-gray-500 mt-1">
+                                <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:information-outline"></span>
+                                Puedes subir este informe desde el <strong>{{ $fechaInicioSubida->format('d/m/Y') }}</strong> 
+                                hasta el <strong>{{ $fechaFinSubida->format('d/m/Y') }}</strong>
+                            </p>
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:clock-outline"></span>
+                                Se permite subir 5 días antes y hasta 5 días después de la fecha límite.
+                            </p>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- ========== INFORMACIÓN DEL PROGRESO ========== -->
+            <!-- Si está vencido, mostrar advertencia adicional -->
+            @if($estaVencido)
+                <div class="bg-red-50/80 rounded-lg p-3 border border-red-200">
+                    <p class="text-xs text-red-600 flex items-center gap-2">
+                        <span class="iconify w-4 h-4 flex-shrink-0" data-icon="mdi:clock-alert"></span>
+                        <span>Este informe se está subiendo fuera del plazo establecido.</span>
+                    </p>
+                </div>
+            @endif
+
+            <!-- ========== INFORMACIÓN DEL TRÁMITE ========== -->
+            <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                    <div>
+                        <span class="font-semibold text-gray-600">Estudiante:</span>
+                        <span class="text-gray-800 block">{{ Auth::user()->name }} {{ Auth::user()->apellidos }}</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-600">Matrícula:</span>
+                        <span class="text-gray-800 block">{{ Auth::user()->matricula }}</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-600">Carrera:</span>
+                        <span class="text-gray-800 block">{{ Auth::user()->carrera }}</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-600">Horas requeridas:</span>
+                        <span class="text-amber-600 font-medium block">480 horas (total)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== INFORMACIÓN DEL PROGRESO (CORREGIDO) ========== -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
                     <div class="flex items-center gap-2">
                         <span class="iconify w-5 h-5 text-blue-600" data-icon="mdi:clock-outline"></span>
                         <span class="text-sm text-gray-600 font-medium">Horas completadas</span>
                     </div>
-                    <p class="text-xl font-bold text-gray-800 mt-1">{{ $servicioSocial->horas_completadas ?? 0 }} / 480</p>
+                    <p class="text-xl font-bold text-gray-800 mt-1">
+                        {{ $horasCompletadas }} / 480
+                        @if($horasCompletadas >= 480)
+                            <span class="text-xs text-green-600 font-normal ml-2">
+                                <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:check-circle"></span>
+                                Completado
+                            </span>
+                        @else
+                            <span class="text-xs text-amber-600 font-normal ml-2">
+                                <span class="iconify w-3.5 h-3.5 inline align-middle mr-0.5" data-icon="mdi:clock-outline"></span>
+                                Faltan {{ 480 - $horasCompletadas }} horas
+                            </span>
+                        @endif
+                    </p>
                 </div>
                 <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
                     <div class="flex items-center gap-2">
@@ -103,17 +177,6 @@
                         <span class="text-sm text-gray-600 font-medium">Requisito mínimo</span>
                     </div>
                     <p class="text-xl font-bold text-amber-600 mt-1">480 horas</p>
-                </div>
-            </div>
-
-            <!-- ========== DESCRIPCIÓN / INFORMACIÓN ========== -->
-            <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8]">
-                <div class="flex items-start gap-3">
-                    <span class="iconify w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
-                    <div>
-                        <p class="text-sm text-gray-700 font-medium">Segundo informe de actividades correspondiente al último trimestre del Servicio Social.</p>
-                        <p class="text-xs text-gray-500 mt-1">Formato requerido: <span class="font-medium">PDF</span> | Tamaño máximo: <span class="font-medium text-red-600">5 MB</span></p>
-                    </div>
                 </div>
             </div>
 
@@ -130,7 +193,7 @@
                 </div>
                 <p class="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
                     <span class="iconify w-3.5 h-3.5 text-gray-400" data-icon="mdi:information-outline"></span>
-                    Máximo <span class="font-medium text-red-600">5 MB</span>. Solo archivos PDF.
+                    Máximo 5MB. Solo archivos PDF.
                 </p>
                 <!-- Indicador de tamaño del archivo -->
                 <div id="tamaño-archivo" class="hidden mt-2 text-xs font-medium flex items-center gap-1.5"></div>
@@ -171,17 +234,14 @@
 <!-- ========================================== -->
 <div id="alertaPersonalizada" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
     <div class="bg-[#f5f0e8] rounded-xl shadow-2xl border border-[#d4c9b8] max-w-md w-full p-6 sm:p-8" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
-        <!-- Icono de advertencia -->
         <div class="flex justify-center mb-4">
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                 <span class="iconify w-10 h-10 text-red-600" data-icon="mdi:alert-circle"></span>
             </div>
         </div>
         
-        <!-- Título -->
         <h3 class="text-xl font-bold text-gray-800 text-center mb-2">¡Archivo demasiado grande!</h3>
         
-        <!-- Mensaje -->
         <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8] mb-4">
             <p class="text-sm text-gray-700 text-center">
                 El archivo que intentas subir excede el límite permitido.
@@ -198,7 +258,6 @@
             </div>
         </div>
         
-        <!-- Sugerencia -->
         <div class="bg-amber-50/80 rounded-lg p-3 border border-amber-200 mb-5">
             <p class="text-xs text-amber-700 flex items-center gap-2">
                 <span class="iconify w-4 h-4 flex-shrink-0" data-icon="mdi:lightbulb-outline"></span>
@@ -206,7 +265,6 @@
             </p>
         </div>
         
-        <!-- Botón -->
         <button onclick="cerrarAlerta()" class="w-full py-2.5 bg-green-700 hover:bg-green-800 text-white font-semibold rounded-lg transition shadow-md hover:shadow-lg border border-green-800">
             Entendido
         </button>
@@ -223,7 +281,6 @@
         const tamañoDiv = document.getElementById('tamaño-archivo');
         const MAX_SIZE = 5 * 1024 * 1024; // 5 MB en bytes
 
-        // Mostrar tamaño del archivo al seleccionar
         inputFile.addEventListener('change', function() {
             const archivo = this.files[0];
             if (archivo) {
@@ -249,7 +306,6 @@
             }
         });
 
-        // Validar antes de enviar
         form.addEventListener('submit', function(e) {
             const archivo = inputFile.files[0];
             if (archivo && archivo.size > MAX_SIZE) {
@@ -260,7 +316,6 @@
         });
     });
 
-    // Función para mostrar alerta personalizada
     function mostrarAlertaPersonalizada(tamañoMB) {
         const alerta = document.getElementById('alertaPersonalizada');
         const tamañoSpan = document.getElementById('tamañoArchivoAlerta');
@@ -269,21 +324,18 @@
         document.body.style.overflow = 'hidden';
     }
 
-    // Función para cerrar alerta
     function cerrarAlerta() {
         const alerta = document.getElementById('alertaPersonalizada');
         alerta.classList.add('hidden');
         document.body.style.overflow = 'auto';
     }
 
-    // Cerrar con tecla ESC
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             cerrarAlerta();
         }
     });
 
-    // Cerrar al hacer clic fuera del modal
     document.getElementById('alertaPersonalizada').addEventListener('click', function(e) {
         if (e.target === this) {
             cerrarAlerta();
