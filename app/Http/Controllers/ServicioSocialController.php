@@ -25,8 +25,7 @@ class ServicioSocialController extends Controller
         $servicioSocial = $user->servicioSocial;
 
         if (!$servicioSocial || !$servicioSocial->fecha_inicio) {
-            return redirect()->route('solicitud-servicio-social.create')
-                ->with('info', 'Completa el formulario de solicitud para comenzar.');
+            return view('servicio_social.no_solicitado');
         }
 
         $documentosAdministrativos = [

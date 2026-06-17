@@ -13,18 +13,18 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- TARJETA PRINCIPAL - ESTILO CONALEP (FONDO BLANCO) -->
+        <!-- TARJETA PRINCIPAL - ESTILO CONALEP -->
         <!-- ========================================== -->
-        <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-amber-200">
+        <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-green-200">
             
-            <!-- Cabecera con icono - COLOR ÁMBAR (ADVERTENCIA) -->
-            <div class="bg-amber-50/80 border-b border-gray-200/80 px-6 sm:px-8 py-5 flex items-center gap-4">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-amber-600" data-icon="mdi:alert-circle"></span>
+            <!-- Cabecera con icono -->
+            <div class="bg-green-50/80 border-b border-gray-200/80 px-6 sm:px-8 py-5 flex items-center gap-4">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-green-600" data-icon="mdi:briefcase-account"></span>
                 </div>
                 <div>
-                    <h2 class="text-lg sm:text-xl font-bold text-amber-800">Requisito no cumplido</h2>
-                    <p class="text-xs sm:text-sm text-amber-600/80">Acceso restringido</p>
+                    <h2 class="text-lg sm:text-xl font-bold text-green-800">Sin solicitud registrada</h2>
+                    <p class="text-xs sm:text-sm text-green-600/80">Servicio Social</p>
                 </div>
             </div>
 
@@ -33,11 +33,11 @@
                 <!-- Mensaje principal -->
                 <div class="bg-white rounded-lg p-4 sm:p-5 border border-gray-200/80">
                     <div class="flex items-start gap-3">
-                        <span class="iconify w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
+                        <span class="iconify w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
                         <div>
                             <p class="text-sm sm:text-base text-gray-700 leading-relaxed">
-                                Para acceder al módulo de <strong class="text-amber-700">Prácticas Profesionales</strong>, 
-                                primero debes completar y liberar tu <strong class="text-green-700">Servicio Social</strong>.
+                                Aún no has solicitado <strong class="text-green-700">Servicio Social</strong>.
+                                Completa el formulario de solicitud para comenzar tu trámite.
                             </p>
                         </div>
                     </div>
@@ -47,36 +47,36 @@
                 <div class="bg-white rounded-lg p-4 sm:p-5 border border-gray-200/80">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <span class="iconify w-4 h-4" data-icon="mdi:list-check"></span>
-                        ¿Qué debes hacer?
+                        ¿Cómo empezar?
                     </p>
                     <ul class="space-y-2.5 text-sm text-gray-700">
                         <li class="flex items-start gap-3">
-                            <span class="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-amber-600 text-xs font-bold">1</span>
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">1</span>
                             </span>
-                            <span>Completa todos los documentos de tu <strong>Servicio Social</strong></span>
+                            <span>Completa el formulario de <strong>solicitud</strong></span>
                         </li>
                         <li class="flex items-start gap-3">
-                            <span class="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-amber-600 text-xs font-bold">2</span>
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">2</span>
                             </span>
-                            <span>Espera la <strong>validación</strong> y <strong>liberación</strong> del trámite</span>
+                            <span>Sube los <strong>documentos requeridos</strong></span>
                         </li>
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <span class="text-green-600 text-xs font-bold">3</span>
                             </span>
-                            <span>Una vez liberado, podrás acceder a <strong>Prácticas Profesionales</strong></span>
+                            <span>Espera la <strong>validación</strong> y <strong>liberación</strong> del trámite</span>
                         </li>
                     </ul>
                 </div>
 
                 <!-- Botón de acción -->
                 <div class="pt-2">
-                    <a href="{{ route('servicio-social.index') }}" 
+                    <a href="{{ route('solicitud-servicio-social.create') }}" 
                        class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-green-700 hover:bg-green-800 text-white text-sm font-bold rounded-lg transition shadow-md hover:shadow-lg border border-green-800">
-                        <span class="iconify w-5 h-5" data-icon="mdi:hand-heart"></span>
-                        Ir a mi Servicio Social
+                        <span class="iconify w-5 h-5" data-icon="mdi:plus-circle"></span>
+                        Ir al formulario
                     </a>
                 </div>
             </div>

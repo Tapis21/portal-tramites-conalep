@@ -120,8 +120,18 @@
                                 <span class="iconify inline mr-1 align-middle text-emerald-600" data-icon="mdi:calendar-start"></span>
                                 Fecha de inicio
                             </label>
-                            <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ old('fecha_inicio') }}" 
-                                   class="w-full p-2.5 border border-[#d4c9b8] rounded-lg bg-white/90 text-gray-700 text-sm focus:border-green-600 focus:ring-2 focus:ring-green-200 transition" required>
+                            <!-- ===== FLATPICKR INPUT ===== -->
+                            <div class="relative">
+                                <input type="text" name="fecha_inicio" id="fecha_inicio" 
+                                       value="{{ old('fecha_inicio') }}" 
+                                       class="flatpickr-input w-full p-2.5 border border-[#d4c9b8] rounded-lg bg-white/90 text-gray-700 text-sm focus:border-green-600 focus:ring-2 focus:ring-green-200 transition cursor-pointer"
+                                       placeholder="Selecciona una fecha" 
+                                       readonly
+                                       required>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+                                    <span class="iconify w-5 h-5 text-green-500" data-icon="mdi:calendar"></span>
+                                </div>
+                            </div>
                             <p class="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
                                 <span class="iconify w-3.5 h-3.5 text-gray-400" data-icon="mdi:information-outline"></span>
                                 No se permiten fines de semana
@@ -132,8 +142,8 @@
                                 <span class="iconify inline mr-1 align-middle text-rose-600" data-icon="mdi:calendar-end"></span>
                                 Fecha de finalización (aprox.)
                             </label>
-                            <input type="text" id="fecha_finalizacion" 
-                                   class="w-full p-2.5 border border-[#d4c9b8] rounded-lg bg-gray-100/70 text-gray-700 text-sm" 
+                            <input type="text" id="fecha_finalizacion" name="fecha_finalizacion"
+                                   class="w-full p-2.5 border border-[#d4c9b8] rounded-lg bg-gray-100/70 text-gray-700 text-sm cursor-not-allowed" 
                                    readonly placeholder="Selecciona fecha de inicio">
                             <p class="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
                                 <span class="iconify w-3.5 h-3.5 text-gray-400" data-icon="mdi:information-outline"></span>
@@ -274,52 +284,4 @@
         </div>
     </form>
 </div>
-
-<!-- ========================================== -->
-<!-- JAVASCRIPT PARA CÁLCULO DE FECHAS -->
-<!-- ========================================== -->
-<script>
-    function ajustarFechaSiFinDeSemana(fecha) {
-        var dia = fecha.getDay();
-        if (dia === 6) {
-            fecha.setDate(fecha.getDate() + 2);
-        } else if (dia === 0) {
-            fecha.setDate(fecha.getDate() + 1);
-        }
-        return fecha;
-    }
-
-    function formatearFecha(fecha) {
-        var año = fecha.getFullYear();
-        var mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-        var dia = fecha.getDate().toString().padStart(2, '0');
-        return `${año}-${mes}-${dia}`;
-    }
-
-    document.getElementById('fecha_inicio').addEventListener('change', function() {
-        var fechaInicioStr = this.value;
-        var finalizacionInput = document.getElementById('fecha_finalizacion');
-        
-        if (fechaInicioStr) {
-            var partes = fechaInicioStr.split('-');
-            var fecha = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
-            
-            // Para prácticas: 4 meses
-            var mesDestino = fecha.getUTCMonth() + 4;
-            var añoDestino = fecha.getUTCFullYear() + Math.floor(mesDestino / 12);
-            var mesDestinoFinal = mesDestino % 12;
-            
-            var nuevaFecha = new Date(Date.UTC(añoDestino, mesDestinoFinal, fecha.getUTCDate()));
-            
-            if (nuevaFecha.getUTCMonth() !== mesDestinoFinal) {
-                nuevaFecha.setUTCDate(0);
-            }
-            
-            nuevaFecha = ajustarFechaSiFinDeSemana(nuevaFecha);
-            finalizacionInput.value = formatearFecha(nuevaFecha);
-        } else {
-            finalizacionInput.value = '';
-        }
-    });
-</script>
 @endsection

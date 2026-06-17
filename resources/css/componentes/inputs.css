@@ -1,0 +1,81 @@
+/* ========================================== */
+/* INPUTS - ESTILOS REUTILIZABLES */
+/* ========================================== */
+
+/* === Input base === */
+.input-conalep {
+    width: 100%;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    color: var(--color-gray-700);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+
+.input-conalep:hover {
+    border-color: var(--color-primary-light);
+}
+
+.input-conalep:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15), var(--shadow-sm);
+}
+
+.input-conalep:disabled {
+    background-color: var(--color-gray-100);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.input-conalep::placeholder {
+    color: var(--color-gray-400);
+}
+
+/* === Input de solo lectura === */
+.input-conalep-readonly {
+    background-color: var(--color-gray-50);
+    cursor: default;
+}
+
+/* === Variantes === */
+.input-conalep-green {
+    border-color: var(--color-primary-border);
+}
+
+.input-conalep-green:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+
+.input-conalep-error {
+    border-color: var(--color-error);
+}
+
+.input-conalep-error:focus {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.input-conalep-success {
+    border-color: var(--color-success);
+}
+
+.input-conalep-success:focus {
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+}
+
+/* === Tamaños === */
+.input-conalep-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+.input-conalep-lg {
+    padding: 1rem 1.25rem;
+    font-size: var(--font-size-base);
+}

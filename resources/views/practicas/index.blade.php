@@ -13,8 +13,8 @@
 
     <!-- Título -->
     <div class="flex items-center gap-3 mb-6">
-        <span class="iconify w-8 h-8 sm:w-10 sm:h-10 text-green-700" data-icon="mdi:briefcase-account"></span>
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Mis Prácticas Profesionales</h1>
+        <span class="iconify w-8 h-8 sm:w-10 sm:h-10 text-green-700" data-icon="mdi:briefcase"></span>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Mis Prácticas Profesionales</h1>
     </div>
 
     <!-- ========================================== -->
@@ -57,49 +57,49 @@
     @endif
 
     @if($practica)
-        <div class="bg-[#f5f0e8] rounded-xl shadow-xl border border-[#d4c9b8] overflow-hidden" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+        <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-green-200">
             <div class="p-4 sm:p-6">
                 <!-- Fechas importantes -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                    <div class="bg-white/70 border border-[#d4c9b8] rounded-lg p-2 sm:p-3 hover:bg-white/90 transition">
+                    <div class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200/80 hover:border-green-200 transition">
                         <p class="text-xs text-gray-500 flex items-center gap-1">
-                            <span class="iconify w-3 h-3 text-blue-600" data-icon="mdi:calendar-start"></span>
+                            <span class="iconify w-3 h-3 text-green-700" data-icon="mdi:calendar-start"></span>
                             Fecha de inicio
                         </p>
-                        <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
+                        <p class="text-sm sm:text-base font-semibold text-gray-900">{{ $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : 'No definida' }}</p>
                     </div>
-                    <div class="bg-white/70 border border-[#d4c9b8] rounded-lg p-2 sm:p-3 hover:bg-white/90 transition">
+                    <div class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200/80 hover:border-green-200 transition">
                         <p class="text-xs text-gray-500 flex items-center gap-1">
-                            <span class="iconify w-3 h-3 text-sky-600" data-icon="mdi:file-document"></span>
+                            <span class="iconify w-3 h-3 text-green-700" data-icon="mdi:file-document"></span>
                             Primer informe disponible
                         </p>
-                        <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_parcial ? \Carbon\Carbon::parse($practica->fecha_limite_parcial)->format('d/m/Y') : 'No definida' }}</p>
+                        <p class="text-sm sm:text-base font-semibold text-gray-900">{{ $practica->fecha_limite_parcial ? \Carbon\Carbon::parse($practica->fecha_limite_parcial)->format('d/m/Y') : 'No definida' }}</p>
                     </div>
-                    <div class="bg-white/70 border border-[#d4c9b8] rounded-lg p-2 sm:p-3 hover:bg-white/90 transition">
+                    <div class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200/80 hover:border-green-200 transition">
                         <p class="text-xs text-gray-500 flex items-center gap-1">
-                            <span class="iconify w-3 h-3 text-amber-600" data-icon="mdi:file-document-multiple"></span>
+                            <span class="iconify w-3 h-3 text-green-700" data-icon="mdi:file-document-multiple"></span>
                             Segundo informe disponible
                         </p>
-                        <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
+                        <p class="text-sm sm:text-base font-semibold text-gray-900">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                     </div>
-                    <div class="bg-white/70 border border-[#d4c9b8] rounded-lg p-2 sm:p-3 hover:bg-white/90 transition">
+                    <div class="bg-white rounded-lg p-2 sm:p-3 border border-gray-200/80 hover:border-green-200 transition">
                         <p class="text-xs text-gray-500 flex items-center gap-1">
-                            <span class="iconify w-3 h-3 text-emerald-600" data-icon="mdi:calendar-end"></span>
+                            <span class="iconify w-3 h-3 text-green-700" data-icon="mdi:calendar-end"></span>
                             Fecha de finalización
                         </p>
-                        <p class="text-sm sm:text-base font-semibold text-gray-800">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
+                        <p class="text-sm sm:text-base font-semibold text-gray-900">{{ $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : 'No definida' }}</p>
                     </div>
                 </div>
 
                 <!-- Estatus -->
                 <p class="mb-4">
-                    <strong class="text-sm sm:text-base">Estatus:</strong>
+                    <strong class="text-sm sm:text-base text-gray-700">Estatus:</strong>
                     <span class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full inline-flex items-center gap-1
                         @if($practica->estatus == 'liberado') bg-green-100 text-green-800
                         @elseif($practica->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
-                        @elseif($practica->estatus == 'en_progreso') bg-blue-100 text-blue-800
-                        @elseif($practica->estatus == 'pendiente') bg-yellow-100 text-yellow-800
-                        @else bg-gray-100 text-gray-800 @endif">
+                        @elseif($practica->estatus == 'en_progreso') bg-green-50 text-green-700
+                        @elseif($practica->estatus == 'pendiente') bg-gray-100 text-gray-600
+                        @else bg-gray-100 text-gray-500 @endif">
                         
                         @if($practica->estatus == 'liberado')
                             <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:check-decagram"></span>
@@ -154,7 +154,7 @@
                     <div class="overflow-x-auto">
                         <div class="md:min-w-full">
                             <!-- Encabezados -->
-                            <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 bg-white/70 border border-[#d4c9b8] rounded-t-lg text-xs font-semibold text-gray-600 mb-2">
+                            <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 bg-white border border-gray-200/80 rounded-t-lg text-xs font-semibold text-gray-600 mb-2">
                                 <div class="col-span-6">Documento</div>
                                 <div class="col-span-3">Estado</div>
                                 <div class="col-span-2">Descarga</div>
@@ -219,7 +219,7 @@
                                         }
                                     @endphp
                                     
-                                    <div class="bg-white/70 rounded-lg border border-[#d4c9b8] hover:border-green-300 transition">
+                                    <div class="bg-white rounded-lg border border-gray-200/80 hover:border-green-200 transition">
                                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start md:items-center p-3">
                                             <!-- Nombre -->
                                             <div class="flex items-center gap-2 md:col-span-6">
@@ -348,7 +348,7 @@
                                                         <button type="button" 
                                                                 class="comentario-btn inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 transition relative"
                                                                 onclick="marcarComentariosComoLeidos(this)">
-                                                            <span class="iconify w-5 h-5 text-gray-600 group-hover:text-blue-600 transition" 
+                                                            <span class="iconify w-5 h-5 text-gray-600 group-hover:text-green-600 transition" 
                                                                   data-icon="mdi:comment-text-outline"></span>
                                                             
                                                             @if($comentariosNoLeidos > 0)
@@ -415,7 +415,7 @@
             </div>
         </div>
     @else
-        <div class="bg-[#f5f0e8] rounded-xl shadow-xl border border-[#d4c9b8] p-8 text-center" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+        <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 p-8 text-center">
             <span class="iconify w-16 h-16 text-gray-300 mx-auto mb-4" data-icon="mdi:file-document-outline"></span>
             <p class="text-gray-600 font-medium">No hay registro de Prácticas Profesionales para este usuario.</p>
             <p class="text-gray-400 text-sm mt-1">Completa el formulario de solicitud para comenzar.</p>
@@ -428,22 +428,22 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR -->
+<!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR (FONDO TRANSPARENTE) -->
 <!-- ========================================== -->
-<div id="modalEliminar" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-    <div class="bg-[#f5f0e8] rounded-xl shadow-2xl border border-[#d4c9b8] max-w-md w-full p-6 sm:p-8" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+<div id="modalEliminar" class="hidden fixed inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center z-[9999] p-4">
+    <div class="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-md w-full p-6 sm:p-8 transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
         <!-- Icono de advertencia -->
         <div class="flex justify-center mb-4">
-            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                <span class="iconify w-10 h-10 text-red-600" data-icon="mdi:alert-circle"></span>
+            <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
+                <span class="iconify w-10 h-10 text-red-500" data-icon="mdi:alert-circle"></span>
             </div>
         </div>
         
         <!-- Título -->
-        <h3 class="text-xl font-bold text-gray-800 text-center mb-2">¿Estás seguro?</h3>
+        <h3 class="text-xl font-bold text-gray-900 text-center mb-2">¿Estás seguro?</h3>
         
         <!-- Mensaje -->
-        <div class="bg-white/70 rounded-lg p-4 border border-[#d4c9b8] mb-4">
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
             <p class="text-sm text-gray-700 text-center" id="mensajeModalEliminar">
                 Esta acción no se puede deshacer.
             </p>
@@ -451,11 +451,11 @@
         
         <!-- Botones -->
         <div class="flex flex-col sm:flex-row gap-3">
-            <button onclick="confirmarEliminar()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition shadow-md hover:shadow-lg border border-red-700">
+            <button onclick="confirmarEliminar()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition shadow-sm border border-red-700">
                 <span class="iconify inline mr-1 align-middle" data-icon="mdi:delete"></span>
                 Sí, eliminar
             </button>
-            <button onclick="cerrarModalEliminar()" class="flex-1 py-2.5 bg-[#d4c9b8] hover:bg-[#c4b9a8] text-gray-700 font-semibold rounded-lg transition shadow-sm">
+            <button onclick="cerrarModalEliminar()" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition shadow-sm">
                 <span class="iconify inline mr-1 align-middle" data-icon="mdi:close"></span>
                 Cancelar
             </button>
@@ -475,6 +475,7 @@
         tipoEliminar = tipo;
         
         const modal = document.getElementById('modalEliminar');
+        const content = document.getElementById('modalContent');
         const mensaje = document.getElementById('mensajeModalEliminar');
         
         if (tipo === 'informe') {
@@ -485,13 +486,25 @@
         
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
     }
 
     function cerrarModalEliminar() {
         const modal = document.getElementById('modalEliminar');
-        modal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-        urlEliminar = '';
+        const content = document.getElementById('modalContent');
+        
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            urlEliminar = '';
+        }, 200);
     }
 
     function confirmarEliminar() {
@@ -623,6 +636,10 @@ document.addEventListener('DOMContentLoaded', function() {
             right: auto !important;
             left: 12px !important;
         }
+    }
+    
+    #modalContent {
+        transition: all 0.2s ease-out;
     }
 </style>
 @endsection

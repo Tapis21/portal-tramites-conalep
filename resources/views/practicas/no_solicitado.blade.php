@@ -15,28 +15,28 @@
         <!-- ========================================== -->
         <!-- TARJETA PRINCIPAL - ESTILO CONALEP -->
         <!-- ========================================== -->
-        <div class="bg-[#f5f0e8] rounded-xl shadow-xl border border-[#d4c9b8] overflow-hidden" style="background: linear-gradient(145deg, #f5f0e8 0%, #faf6ef 100%);">
+        <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-green-200">
             
             <!-- Cabecera con icono -->
-            <div class="bg-blue-50/80 border-b border-[#d4c9b8] px-6 sm:px-8 py-5 flex items-center gap-4">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-blue-600" data-icon="mdi:file-document-outline"></span>
+            <div class="bg-green-50/80 border-b border-gray-200/80 px-6 sm:px-8 py-5 flex items-center gap-4">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span class="iconify w-7 h-7 sm:w-8 sm:h-8 text-green-600" data-icon="mdi:briefcase"></span>
                 </div>
                 <div>
-                    <h2 class="text-lg sm:text-xl font-bold text-blue-800">Sin solicitud registrada</h2>
-                    <p class="text-xs sm:text-sm text-blue-600/80">Prácticas Profesionales</p>
+                    <h2 class="text-lg sm:text-xl font-bold text-green-800">Sin solicitud registrada</h2>
+                    <p class="text-xs sm:text-sm text-green-600/80">Prácticas Profesionales</p>
                 </div>
             </div>
 
             <!-- Cuerpo -->
             <div class="px-6 sm:px-8 py-6 sm:py-8 space-y-5">
                 <!-- Mensaje principal -->
-                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                <div class="bg-white rounded-lg p-4 sm:p-5 border border-gray-200/80">
                     <div class="flex items-start gap-3">
-                        <span class="iconify w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
+                        <span class="iconify w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" data-icon="mdi:information-outline"></span>
                         <div>
                             <p class="text-sm sm:text-base text-gray-700 leading-relaxed">
-                                Aún no has solicitado <strong class="text-blue-700">Prácticas Profesionales</strong>.
+                                Aún no has solicitado <strong class="text-green-700">Prácticas Profesionales</strong>.
                                 Completa el formulario de solicitud para comenzar tu trámite.
                             </p>
                         </div>
@@ -44,21 +44,21 @@
                 </div>
 
                 <!-- Pasos a seguir -->
-                <div class="bg-white/70 rounded-lg p-4 sm:p-5 border border-[#d4c9b8]">
+                <div class="bg-white rounded-lg p-4 sm:p-5 border border-gray-200/80">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <span class="iconify w-4 h-4" data-icon="mdi:list-check"></span>
                         ¿Cómo empezar?
                     </p>
                     <ul class="space-y-2.5 text-sm text-gray-700">
                         <li class="flex items-start gap-3">
-                            <span class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-blue-600 text-xs font-bold">1</span>
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">1</span>
                             </span>
                             <span>Completa el formulario de <strong>solicitud</strong></span>
                         </li>
                         <li class="flex items-start gap-3">
-                            <span class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="text-blue-600 text-xs font-bold">2</span>
+                            <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-600 text-xs font-bold">2</span>
                             </span>
                             <span>Sube los <strong>documentos requeridos</strong></span>
                         </li>
