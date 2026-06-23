@@ -22,6 +22,8 @@ class PracticaResource extends Resource
 
     protected static ?string $navigationLabel = 'Prácticas Profesionales';
 
+    protected static ?int $navigationSort = 3;
+
     public static function form(Schema $schema): Schema
     {
         return PracticaForm::configure($schema);

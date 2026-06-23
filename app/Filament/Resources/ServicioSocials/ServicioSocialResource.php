@@ -6,7 +6,7 @@ use App\Filament\Resources\ServicioSocials\Pages\CreateServicioSocial;
 use App\Filament\Resources\ServicioSocials\Pages\EditServicioSocial;
 use App\Filament\Resources\ServicioSocials\Pages\ListServicioSocials;
 use App\Filament\Resources\ServicioSocials\Schemas\ServicioSocialForm;
-use App\Filament\Resources\ServicioSocials\Tables\ServicioSocialTable;
+use App\Filament\Resources\ServicioSocials\Tables\ServicioSocialsTable;
 use App\Models\ServicioSocial;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -22,6 +22,8 @@ class ServicioSocialResource extends Resource
 
     protected static ?string $navigationLabel = 'Servicio Social';
 
+    protected static ?int $navigationSort = 2;
+
     public static function form(Schema $schema): Schema
     {
         return ServicioSocialForm::configure($schema);
@@ -29,7 +31,7 @@ class ServicioSocialResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return ServicioSocialTable::configure($table);
+        return ServicioSocialsTable::configure($table);
     }
 
     public static function getRelations(): array
