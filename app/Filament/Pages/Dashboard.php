@@ -13,4 +13,6 @@ class Dashboard extends Page
     protected static ?string $navigationLabel = 'Escritorio';
     
     protected static ?int $navigationSort = 1;
+
+    protected string $view = 'filament.pages.dashboard';
 }

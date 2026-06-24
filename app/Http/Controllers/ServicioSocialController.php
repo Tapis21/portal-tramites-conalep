@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\Documento;
 use App\Models\TipoDocumento;
-
 use App\Models\Comentario;
-
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use PhpOffice\PhpWord\IOFactory;
@@ -78,18 +76,15 @@ class ServicioSocialController extends Controller
         $fechaHoy = now()->startOfDay();
         $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        // ========== CALCULAR HORAS COMPLETADAS ==========
-        // CONVERTIR a Carbon antes de usar
         $fechaInicio = $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
             $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
-            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
-            $horasCompletadas = min($horasCompletadas, 480); // No puede superar 480
+            $horasCompletadas = $diasTranscurridos * 4;
+            $horasCompletadas = min($horasCompletadas, 480);
         }
         
-        // Si no hay fecha límite definida
         if (!$fechaLimite) {
             return redirect()->route('servicio-social.index')
                 ->with('error', 'No hay fecha límite definida para el Primer Informe. Contacta al administrador.');
@@ -97,7 +92,6 @@ class ServicioSocialController extends Controller
 
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
-        // BLOQUEAR si falta más de 5 días
         if ($diasRestantes > 5) {
             $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
@@ -123,7 +117,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar que esté dentro del período permitido (incluyendo vencido)
         $fechaLimite = $servicioSocial->fecha_limite_primer_informe;
         $fechaHoy = now()->startOfDay();
 
@@ -134,17 +127,12 @@ class ServicioSocialController extends Controller
 
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
-        // BLOQUEAR si falta más de 5 días
         if ($diasRestantes > 5) {
             $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
                 ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
-        // PERMITIR subir si está dentro del período permitido (-5 a +5 días o vencido)
-        // No bloquear si está vencido (más de 5 días después)
-
-        // Validar archivo
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
@@ -172,15 +160,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')
             ->with('success', 'Primer Informe subido correctamente.');
@@ -199,15 +179,13 @@ class ServicioSocialController extends Controller
         $fechaHoy = now()->startOfDay();
         $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        // ========== CALCULAR HORAS COMPLETADAS ==========
-        // CONVERTIR a Carbon antes de usar
         $fechaInicio = $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
             $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
-            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
-            $horasCompletadas = min($horasCompletadas, 480); // No puede superar 480
+            $horasCompletadas = $diasTranscurridos * 4;
+            $horasCompletadas = min($horasCompletadas, 480);
         }
         
         if (!$fechaLimite) {
@@ -242,7 +220,6 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
-        // Validar que esté dentro del período permitido (incluyendo vencido)
         $fechaLimite = $servicioSocial->fecha_limite_segundo_informe;
         $fechaHoy = now()->startOfDay();
 
@@ -253,14 +230,11 @@ class ServicioSocialController extends Controller
 
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
-        // BLOQUEAR si falta más de 5 días
         if ($diasRestantes > 5) {
             $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
                 ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
-
-        // PERMITIR subir si está dentro del período permitido
 
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
@@ -289,15 +263,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')
             ->with('success', 'Segundo Informe subido correctamente.');
@@ -357,15 +323,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Solicitud subida correctamente.');
     }
@@ -424,15 +382,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Elección de Modalidad subida correctamente.');
     }
@@ -491,15 +441,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Carta de Presentación subida correctamente.');
     }
@@ -558,15 +500,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Carta de Aceptación subida correctamente.');
     }
@@ -625,15 +559,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Evaluación subida correctamente.');
     }
@@ -692,15 +618,7 @@ class ServicioSocialController extends Controller
             $comentario->save();
         }
 
-        if ($servicioSocial->estatus == 'pendiente') {
-            $servicioSocial->estatus = 'en_progreso';
-            $servicioSocial->save();
-        }
-
-        if ($servicioSocial->documentosCompletos() && $servicioSocial->estatus !== 'liberado') {
-            $servicioSocial->estatus = 'pendiente_revision';
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('servicio-social.index')->with('success', 'Carta de Liberación subida correctamente.');
     }
@@ -726,15 +644,7 @@ class ServicioSocialController extends Controller
 
         $documento->update(['archivo_pdf' => null, 'estatus' => 'pendiente']);
 
-        // NO actualizar el estatus del trámite si ya está LIBERADO
-        if ($servicioSocial->estatus !== 'liberado') {
-            if ($servicioSocial->documentosCompletos()) {
-                $servicioSocial->estatus = 'pendiente_revision';
-            } else {
-                $servicioSocial->estatus = 'pendiente';
-            }
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
 
         return redirect()->route('servicio-social.index')
             ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo sin perder el historial de comentarios.');
@@ -762,17 +672,57 @@ class ServicioSocialController extends Controller
             return redirect()->route('servicio-social.index')->with('error', 'Tipo de informe no válido.');
         }
 
-        // NO actualizar el estatus del trámite si ya está LIBERADO
-        if ($servicioSocial->estatus !== 'liberado') {
-            if ($servicioSocial->documentosCompletos()) {
-                $servicioSocial->estatus = 'pendiente_revision';
-            } else {
-                $servicioSocial->estatus = 'pendiente';
-            }
-            $servicioSocial->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
 
         return redirect()->route('servicio-social.index')->with('success', $mensaje);
+    }
+
+    // Validar informe parcial (Primer Informe)
+    public function validarReporteParcial($id)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+        $servicioSocial->update([
+            'reporte_parcial_validado' => true,
+            'reporte_parcial_rechazado' => false,
+        ]);
+
+        return redirect()->back()->with('success', 'Primer Informe validado correctamente.');
+    }
+
+    // Rechazar informe parcial (Primer Informe)
+    public function rechazarReporteParcial($id)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+        $servicioSocial->update([
+            'reporte_parcial_validado' => false,
+            'reporte_parcial_rechazado' => true,
+        ]);
+
+        return redirect()->back()->with('error', 'Primer Informe rechazado. El estudiante debe corregirlo.');
+    }
+
+    // Validar informe final (Segundo Informe)
+    public function validarReporteFinal($id)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+        $servicioSocial->update([
+            'reporte_final_validado' => true,
+            'reporte_final_rechazado' => false,
+        ]);
+
+        return redirect()->back()->with('success', 'Segundo Informe validado correctamente.');
+    }
+
+    // Rechazar informe final (Segundo Informe)
+    public function rechazarReporteFinal($id)
+    {
+        $servicioSocial = ServicioSocial::findOrFail($id);
+        $servicioSocial->update([
+            'reporte_final_validado' => false,
+            'reporte_final_rechazado' => true,
+        ]);
+
+        return redirect()->back()->with('error', 'Segundo Informe rechazado. El estudiante debe corregirlo.');
     }
 
     // ==============================================
@@ -782,7 +732,6 @@ class ServicioSocialController extends Controller
     {
         $servicioSocial = ServicioSocial::with('user', 'empresa', 'gradoAcademico', 'horario', 'gradoAcademicoJefe')->findOrFail($id);
         
-        // Verificar que el usuario sea el dueño
         if ($servicioSocial->user_id !== Auth::id()) {
             abort(403);
         }
@@ -791,9 +740,8 @@ class ServicioSocialController extends Controller
 
         $user = $servicioSocial->user;
         
-        // Datos para reemplazar en la plantilla
         $variables = [
-            'nombre_completo' => trim($user->name . '' . $user->apellidos), // ← NUEVA LÍNEA
+            'nombre_completo' => trim($user->name . '' . $user->apellidos),
             'nombre' => $user->name,
             'apellidos' => $user->apellidos,
             'matricula' => $user->matricula,
@@ -816,10 +764,8 @@ class ServicioSocialController extends Controller
             'apoyo_estudiante' => $servicioSocial->apoyo_estudiante,
         ];
 
-        // Cargar la plantilla usando TemplateProcessor
         $templatePath = storage_path('app/templates/solicitud_plantilla.docx');
         
-        // Verificar que la plantilla existe
         if (!file_exists($templatePath)) {
             return redirect()->route('servicio-social.index')
                 ->with('error', 'No se encontró la plantilla de solicitud.');
@@ -827,21 +773,17 @@ class ServicioSocialController extends Controller
         
         $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor($templatePath);
 
-        // Reemplazar variables
         foreach ($variables as $key => $value) {
             $templateProcessor->setValue($key, $value);
         }
 
-        // Crear carpeta temporal si no existe
         if (!file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
-        // Guardar archivo temporal
         $tempPath = storage_path('app/temp/solicitud_' . $user->matricula . '.docx');
         $templateProcessor->saveAs($tempPath);
 
-        // Descargar
         return response()->download($tempPath, 'solicitud_' . $user->matricula . '.docx')->deleteFileAfterSend(true);
     }
 }

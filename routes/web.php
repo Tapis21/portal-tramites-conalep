@@ -120,6 +120,18 @@ Route::middleware('auth')->group(function () {
 
     // Marcar comentarios como leídos
     Route::post('/comentarios/marcar-leidos', [App\Http\Controllers\ComentarioController::class, 'marcarLeidos'])->name('comentarios.marcar-leidos')->middleware('auth');
+
+    // En routes/web.php (panel de admin)
+    Route::post('/admin/servicio-social/{id}/validar-reporte-parcial', [ServicioSocialController::class, 'validarReporteParcial'])->name('admin.servicio-social.validar-reporte-parcial');
+    Route::post('/admin/servicio-social/{id}/rechazar-reporte-parcial', [ServicioSocialController::class, 'rechazarReporteParcial'])->name('admin.servicio-social.rechazar-reporte-parcial');
+    Route::post('/admin/servicio-social/{id}/validar-reporte-final', [ServicioSocialController::class, 'validarReporteFinal'])->name('admin.servicio-social.validar-reporte-final');
+    Route::post('/admin/servicio-social/{id}/rechazar-reporte-final', [ServicioSocialController::class, 'rechazarReporteFinal'])->name('admin.servicio-social.rechazar-reporte-final');
+
+    // En routes/web.php (panel de admin)
+    Route::post('/admin/practicas/{id}/validar-reporte-parcial', [PracticaController::class, 'validarReporteParcial'])->name('admin.practicas.validar-reporte-parcial');
+    Route::post('/admin/practicas/{id}/rechazar-reporte-parcial', [PracticaController::class, 'rechazarReporteParcial'])->name('admin.practicas.rechazar-reporte-parcial');
+    Route::post('/admin/practicas/{id}/validar-reporte-final', [PracticaController::class, 'validarReporteFinal'])->name('admin.practicas.validar-reporte-final');
+    Route::post('/admin/practicas/{id}/rechazar-reporte-final', [PracticaController::class, 'rechazarReporteFinal'])->name('admin.practicas.rechazar-reporte-final');
 });
 
 require __DIR__.'/auth.php';

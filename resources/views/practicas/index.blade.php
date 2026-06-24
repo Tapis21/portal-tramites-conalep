@@ -96,23 +96,19 @@
                     <strong class="text-sm sm:text-base text-gray-700">Estatus:</strong>
                     <span class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full inline-flex items-center gap-1
                         @if($practica->estatus == 'liberado') bg-green-100 text-green-800
-                        @elseif($practica->estatus == 'pendiente_revision') bg-yellow-100 text-yellow-800
-                        @elseif($practica->estatus == 'en_progreso') bg-green-50 text-green-700
-                        @elseif($practica->estatus == 'pendiente') bg-gray-100 text-gray-600
+                        @elseif($practica->estatus == 'en_progreso') bg-blue-100 text-blue-800
+                        @elseif($practica->estatus == 'pendiente') bg-yellow-100 text-yellow-800
                         @else bg-gray-100 text-gray-500 @endif">
                         
                         @if($practica->estatus == 'liberado')
                             <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:check-decagram"></span>
-                            Trámite liberado
-                        @elseif($practica->estatus == 'pendiente_revision')
-                            <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:clock-check"></span>
-                            Pendiente de revisión
+                            Liberado
                         @elseif($practica->estatus == 'en_progreso')
                             <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:progress-clock"></span>
                             En progreso
                         @elseif($practica->estatus == 'pendiente')
                             <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:clock-outline"></span>
-                            Pendiente (documentación incompleta)
+                            Pendiente
                         @else
                             <span class="iconify w-3 h-3 sm:w-4 sm:h-4" data-icon="mdi:file-document-outline"></span>
                             No solicitado
@@ -166,6 +162,7 @@
                                     @php
                                         $ruta = $config['ruta'];
                                         $estaSubido = false;
+                                        $estaValidado = false;
                                         
                                         if ($config['tipo'] == 'admin') {
                                             $docActual = \App\Models\Documento::where('user_id', Auth::id())
@@ -175,10 +172,16 @@
                                                 })->first();
                                             
                                             $estaSubido = $docActual && $docActual->archivo_pdf !== null;
+                                            $estaValidado = $docActual && $docActual->estatus == 'validado';
                                             $doc = $docActual;
                                         } else {
                                             $campo = $config['campo'];
                                             $estaSubido = $practica->$campo ?? false;
+                                            if ($nombre == 'Primer Informe de Actividades') {
+                                                $estaValidado = $practica->reporte_parcial_validado ?? false;
+                                            } else {
+                                                $estaValidado = $practica->reporte_final_validado ?? false;
+                                            }
                                             $doc = null;
                                         }
                                         
@@ -233,14 +236,21 @@
                                                     @php
                                                         if ($nombre == 'Primer Informe de Actividades') {
                                                             $validado = $practica->reporte_parcial_validado ?? false;
+                                                            $rechazado = $practica->reporte_parcial_rechazado ?? false;
                                                         } else {
                                                             $validado = $practica->reporte_final_validado ?? false;
+                                                            $rechazado = $practica->reporte_final_rechazado ?? false;
                                                         }
                                                     @endphp
                                                     
-                                                    @if($validado)
+                                                    @if($rechazado)
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
+                                                            Rechazado
+                                                        </span>
+                                                    @elseif($validado)
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
                                                             Validado
                                                         </span>
                                                     @elseif($estaSubido)
@@ -250,7 +260,7 @@
                                                         </span>
                                                     @else
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
                                                             No subido
                                                         </span>
                                                     @endif
@@ -259,7 +269,7 @@
                                                     @if($estaSubido)
                                                         @if($doc && $doc->estatus == 'validado')
                                                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
+                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
                                                                 Validado
                                                             </span>
                                                         @elseif($doc && $doc->estatus == 'rechazado')
@@ -275,7 +285,7 @@
                                                         @endif
                                                     @else
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
                                                             No subido
                                                         </span>
                                                     @endif
@@ -286,7 +296,7 @@
                                             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:col-span-2 w-full md:w-auto">
                                                 @if($nombre == 'Solicitud de Prácticas Profesionales' && $practica->fecha_inicio)
                                                     <a href="{{ route('practicas.word', $practica->id) }}" 
-                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-md transition w-full sm:w-auto justify-center">
+                                                       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-md transition w-full sm:w-auto justify-center">
                                                         <span class="iconify w-4 h-4" data-icon="mdi:download"></span>
                                                         <span>Descargar</span>
                                                     </a>
@@ -298,40 +308,49 @@
                                             <!-- COLUMNA ACCIONES + COMENTARIOS -->
                                             <div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 md:col-span-1 w-full md:w-auto">
                                                 @if($estaSubido)
-                                                    <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
-                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:refresh"></span>
-                                                        <span class="hidden sm:inline">Cambiar</span>
-                                                    </a>
-                                                    
-                                                    @if($config['tipo'] == 'admin')
-                                                        <button type="button" 
-                                                                onclick="mostrarModalEliminar('{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}', 'documento')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
-                                                            <span class="hidden sm:inline">Eliminar</span>
-                                                        </button>
-                                                    @elseif($config['tipo'] == 'informe')
-                                                        @php
-                                                            $tipoInforme = ($nombre == 'Primer Informe de Actividades') ? 'primero' : 'segundo';
-                                                        @endphp
-                                                        <button type="button" 
-                                                                onclick="mostrarModalEliminar('{{ route('practicas.eliminar-informe', [$practica->id, $tipoInforme]) }}', 'informe')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
-                                                            <span class="hidden sm:inline">Eliminar</span>
-                                                        </button>
+                                                    @if(!$estaValidado)
+                                                        {{-- Mostrar botones SOLO si NO está validado --}}
+                                                        <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:refresh"></span>
+                                                            <span class="hidden sm:inline">Cambiar</span>
+                                                        </a>
+                                                        
+                                                        @if($config['tipo'] == 'admin')
+                                                            <button type="button" 
+                                                                    onclick="mostrarModalEliminar('{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}', 'documento')"
+                                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                                <span class="hidden sm:inline">Eliminar</span>
+                                                            </button>
+                                                        @elseif($config['tipo'] == 'informe')
+                                                            @php
+                                                                $tipoInforme = ($nombre == 'Primer Informe de Actividades') ? 'primero' : 'segundo';
+                                                            @endphp
+                                                            <button type="button" 
+                                                                    onclick="mostrarModalEliminar('{{ route('practicas.eliminar-informe', [$practica->id, $tipoInforme]) }}', 'informe')"
+                                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                                <span class="hidden sm:inline">Eliminar</span>
+                                                            </button>
+                                                        @else
+                                                            <button type="button" 
+                                                                    onclick="mostrarModalEliminar('{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}', 'elemento')"
+                                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                                <span class="hidden sm:inline">Eliminar</span>
+                                                            </button>
+                                                        @endif
                                                     @else
-                                                        <button type="button" 
-                                                                onclick="mostrarModalEliminar('{{ route('practicas.eliminar-documento', [$practica->id, $nombre]) }}', 'elemento')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
-                                                            <span class="hidden sm:inline">Eliminar</span>
-                                                        </button>
+                                                        {{-- Bloqueado (más compacto) --}}
+                                                        <span class="inline-flex items-center gap-0.5 px-2 py-1 bg-gray-200 text-gray-500 text-[10px] sm:text-xs font-medium rounded-md cursor-not-allowed whitespace-nowrap">
+                                                            <span class="iconify w-3 h-3 sm:w-3.5 sm:h-3.5" data-icon="mdi:lock"></span>
+                                                            <span class="hidden xs:inline">Bloqueado</span>
+                                                        </span>
                                                     @endif
                                                 @else
                                                     <a href="{{ route('practicas.' . $ruta, $practica->id) }}" 
-                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
                                                         <span class="iconify w-3.5 h-3.5" data-icon="mdi:cloud-upload"></span>
                                                         <span class="hidden sm:inline">Subir</span>
                                                     </a>

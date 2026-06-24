@@ -84,39 +84,33 @@ class PracticaController extends Controller
         $fechaHoy = now()->startOfDay();
         $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        // ========== CALCULAR HORAS COMPLETADAS ==========
-        // CONVERTIR a Carbon antes de usar
         $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
             $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
-            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
-            $horasCompletadas = min($horasCompletadas, 360); // No puede superar 360
+            $horasCompletadas = $diasTranscurridos * 4;
+            $horasCompletadas = min($horasCompletadas, 360);
         }
         
-        // Variables para la vista
         $estaVencido = false;
         $diasRestantes = null;
         
         if ($fechaLimite) {
             $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
-            $estaVencido = $diasRestantes < -5; // Más de 5 días después
+            $estaVencido = $diasRestantes < -5;
         }
 
-        // Si está en prórroga (1-5 días después), mostrar advertencia
         if ($diasRestantes !== null && $diasRestantes < 0 && $diasRestantes >= -5) {
             $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
             session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
-        // Si está muy adelantado (>5 días antes), mostrar advertencia informativa
         if ($diasRestantes !== null && $diasRestantes > 5) {
             $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             session()->flash('info', 'La fecha límite para subir es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
-        // SIEMPRE permitir ver el formulario
         return view('practicas.subir_reporte_parcial', compact('practica', 'fechaLimite', 'fechaFormateada', 'estaVencido', 'diasRestantes', 'horasCompletadas'));
     }
 
@@ -129,14 +123,11 @@ class PracticaController extends Controller
             abort(403);
         }
 
-        // ELIMINAR TODAS LAS VALIDACIONES DE FECHA
-        // Solo validar el archivo y comentario
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        // Si existe archivo anterior, eliminarlo
         if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
             unlink(storage_path('app/public/' . $practica->archivo_parcial));
         }
@@ -159,15 +150,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Primer Informe subido correctamente.');
@@ -186,15 +169,13 @@ class PracticaController extends Controller
         $fechaHoy = now()->startOfDay();
         $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        // ========== CALCULAR HORAS COMPLETADAS ==========
-        // CONVERTIR a Carbon antes de usar
         $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
             $diasTranscurridos = $fechaInicio->diffInDays($fechaHoy);
-            $horasCompletadas = $diasTranscurridos * 4; // 4 horas por día
-            $horasCompletadas = min($horasCompletadas, 360); // No puede superar 360
+            $horasCompletadas = $diasTranscurridos * 4;
+            $horasCompletadas = min($horasCompletadas, 360);
         }
         
         $estaVencido = false;
@@ -227,7 +208,6 @@ class PracticaController extends Controller
             abort(403);
         }
 
-        // ELIMINAR TODAS LAS VALIDACIONES DE FECHA
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
@@ -242,7 +222,6 @@ class PracticaController extends Controller
         $practica->update([
             'reporte_final_subido' => true,
             'archivo_final' => $path,
-            'estatus' => 'pendiente_revision'
         ]);
 
         if ($request->filled('comentario')) {
@@ -256,15 +235,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Segundo Informe subido correctamente.');
@@ -324,15 +295,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Solicitud subida correctamente.');
@@ -392,15 +355,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Elección de Modalidad subida correctamente.');
@@ -460,15 +415,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Presentación subida correctamente.');
@@ -528,15 +475,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Aceptación subida correctamente.');
@@ -596,15 +535,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Evaluación subida correctamente.');
@@ -664,15 +595,7 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        if ($practica->estatus == 'pendiente') {
-            $practica->estatus = 'en_progreso';
-            $practica->save();
-        }
-
-        if ($practica->documentosCompletos() && $practica->estatus !== 'liberado') {
-            $practica->estatus = 'pendiente_revision';
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Liberación subida correctamente.');
@@ -699,15 +622,7 @@ class PracticaController extends Controller
 
         $documento->update(['archivo_pdf' => null, 'estatus' => 'pendiente']);
 
-        // NO actualizar el estatus del trámite si ya está LIBERADO
-        if ($practica->estatus !== 'liberado') {
-            if ($practica->documentosCompletos()) {
-                $practica->estatus = 'pendiente_revision';
-            } else {
-                $practica->estatus = 'pendiente';
-            }
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
 
         return redirect()->route('practicas.index')
             ->with('success', 'Documento eliminado correctamente.');
@@ -735,17 +650,57 @@ class PracticaController extends Controller
             return redirect()->route('practicas.index')->with('error', 'Tipo de informe no válido.');
         }
 
-        // NO actualizar el estatus del trámite si ya está LIBERADO
-        if ($practica->estatus !== 'liberado') {
-            if ($practica->documentosCompletos()) {
-                $practica->estatus = 'pendiente_revision';
-            } else {
-                $practica->estatus = 'pendiente';
-            }
-            $practica->save();
-        }
+        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
 
         return redirect()->route('practicas.index')->with('success', $mensaje);
+    }
+
+    // Validar informe parcial (Primer Informe)
+    public function validarReporteParcial($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'reporte_parcial_validado' => true,
+            'reporte_parcial_rechazado' => false,
+        ]);
+
+        return redirect()->back()->with('success', 'Primer Informe validado correctamente.');
+    }
+
+    // Rechazar informe parcial (Primer Informe)
+    public function rechazarReporteParcial($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'reporte_parcial_validado' => false,
+            'reporte_parcial_rechazado' => true,
+        ]);
+
+        return redirect()->back()->with('error', 'Primer Informe rechazado. El estudiante debe corregirlo.');
+    }
+
+    // Validar informe final (Segundo Informe)
+    public function validarReporteFinal($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'reporte_final_validado' => true,
+            'reporte_final_rechazado' => false,
+        ]);
+
+        return redirect()->back()->with('success', 'Segundo Informe validado correctamente.');
+    }
+
+    // Rechazar informe final (Segundo Informe)
+    public function rechazarReporteFinal($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'reporte_final_validado' => false,
+            'reporte_final_rechazado' => true,
+        ]);
+
+        return redirect()->back()->with('error', 'Segundo Informe rechazado. El estudiante debe corregirlo.');
     }
 
     public function descargarWordRelleno($id)
@@ -783,7 +738,6 @@ class PracticaController extends Controller
             'apoyo_estudiante' => $practica->apoyo_estudiante,
         ];
 
-        // Plantilla específica para prácticas
         $templatePath = storage_path('app/templates/solicitud_practicas_plantilla.docx');
         
         if (!file_exists($templatePath)) {

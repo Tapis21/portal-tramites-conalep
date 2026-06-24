@@ -3,12 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Models\ServicioSocial;
-use App\Models\Practica;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Filament\Actions\Action;
 
-class SolicitudesPendientes extends BaseWidget
+class SolicitudesPendientesSS extends BaseWidget
 {
     protected ?string $pollingInterval = '15s';
     
@@ -16,40 +16,17 @@ class SolicitudesPendientes extends BaseWidget
     
     public function table(Table $table): Table
     {
-        // Unir las dos tablas con un union
-        $servicioSocial = ServicioSocial::where('estatus', 'pendiente')
-            ->select(
-                'id',
-                'user_id',
-                'empresa_id',
-                'fecha_inicio',
-                'estatus',
-                \DB::raw("'Servicio Social' as tipo")
-            );
-        
-        $practicas = Practica::where('estatus', 'pendiente')
-            ->select(
-                'id',
-                'user_id',
-                'empresa_id',
-                'fecha_inicio',
-                'estatus',
-                \DB::raw("'Prácticas Profesionales' as tipo")
-            );
-        
-        $union = $servicioSocial->union($practicas);
-        
         return $table
-            ->query($union)
+            ->query(
+                ServicioSocial::query()
+                    ->where('estatus', 'pendiente')
+                    ->with(['user', 'empresa'])
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Estudiante')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('tipo')
-                    ->label('Tipo')
-                    ->badge()
-                    ->color(fn (string $state): string => $state === 'Servicio Social' ? 'success' : 'info'),
                 Tables\Columns\TextColumn::make('empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
@@ -75,17 +52,15 @@ class SolicitudesPendientes extends BaseWidget
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('ver')
+                Action::make('ver')
                     ->label('Ver')
                     ->color('primary')
                     ->icon('heroicon-o-eye')
-                    ->url(fn ($record) => $record->tipo === 'Servicio Social' 
-                        ? route('filament.admin.resources.servicio-socials.edit', $record) 
-                        : route('filament.admin.resources.practicas.edit', $record)
-                    ),
+                    ->url(fn ($record) => route('filament.admin.resources.servicio-socials.edit', $record)),
             ])
-            ->emptyStateHeading('¡No hay solicitudes pendientes!')
+            ->emptyStateHeading('¡No hay solicitudes de Servicio Social pendientes!')
             ->emptyStateDescription('Todas las solicitudes han sido revisadas.')
-            ->emptyStateIcon('heroicon-o-check-circle');
+            ->emptyStateIcon('heroicon-o-check-circle')
+            ->defaultSort('created_at', 'desc');
     }
 }

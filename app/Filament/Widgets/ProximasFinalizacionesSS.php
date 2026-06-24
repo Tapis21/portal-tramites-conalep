@@ -3,13 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Models\ServicioSocial;
-use App\Models\Practica;
 use Carbon\Carbon;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 
-class ProximasFinalizaciones extends BaseWidget
+class ProximasFinalizacionesSS extends BaseWidget
 {
     protected ?string $pollingInterval = '30s';
     
@@ -17,54 +16,34 @@ class ProximasFinalizaciones extends BaseWidget
     
     public function table(Table $table): Table
     {
-        // Unir las dos tablas
-        $servicioSocial = ServicioSocial::where('estatus', 'en_progreso')
-            ->whereNotNull('fecha_inicio')
-            ->select(
-                'id',
-                'user_id',
-                'empresa_id',
-                'fecha_inicio',
-                \DB::raw("DATE_ADD(fecha_inicio, INTERVAL 6 MONTH) as fecha_fin"),
-                \DB::raw("'Servicio Social' as tipo")
-            );
-        
-        $practicas = Practica::where('estatus', 'en_progreso')
-            ->whereNotNull('fecha_inicio')
-            ->select(
-                'id',
-                'user_id',
-                'empresa_id',
-                'fecha_inicio',
-                \DB::raw("DATE_ADD(fecha_inicio, INTERVAL 4 MONTH) as fecha_fin"),
-                \DB::raw("'Prácticas Profesionales' as tipo")
-            );
-        
-        $union = $servicioSocial->union($practicas);
-        
         return $table
-            ->query($union)
+            ->query(
+                ServicioSocial::query()
+                    ->where('estatus', 'en_progreso')
+                    ->whereNotNull('fecha_inicio')
+                    ->with(['user', 'empresa'])
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Estudiante')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('tipo')
-                    ->label('Tipo')
-                    ->badge()
-                    ->color(fn (string $state): string => $state === 'Servicio Social' ? 'success' : 'info'),
                 Tables\Columns\TextColumn::make('empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fecha_fin')
+                Tables\Columns\TextColumn::make('fecha_inicio')
+                    ->label('Inicio')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('fecha_limite_segundo_informe')
                     ->label('Finaliza')
                     ->date('d/m/Y')
                     ->sortable()
                     ->color(fn ($record) => self::getDaysColor($record)),
                 Tables\Columns\TextColumn::make('dias_restantes')
                     ->label('Días restantes')
-                    ->state(fn ($record) => Carbon::now()->diffInDays(Carbon::parse($record->fecha_fin)))
+                    ->state(fn ($record) => Carbon::now()->diffInDays($record->fecha_limite_segundo_informe))
                     ->badge()
                     ->color(fn ($state) => match (true) {
                         $state <= 7 => 'danger',
@@ -73,14 +52,15 @@ class ProximasFinalizaciones extends BaseWidget
                     })
                     ->formatStateUsing(fn ($state) => "{$state} días"),
             ])
-            ->emptyStateHeading('¡No hay finalizaciones próximas!')
+            ->emptyStateHeading('¡No hay finalizaciones próximas de Servicio Social!')
             ->emptyStateDescription('Todas las solicitudes tienen fecha de finalización lejana.')
-            ->emptyStateIcon('heroicon-o-calendar');
+            ->emptyStateIcon('heroicon-o-calendar')
+            ->defaultSort('fecha_limite_segundo_informe', 'asc');
     }
     
     protected function getDaysColor($record): string
     {
-        $dias = Carbon::now()->diffInDays(Carbon::parse($record->fecha_fin));
+        $dias = Carbon::now()->diffInDays($record->fecha_limite_segundo_informe);
         
         if ($dias <= 7) {
             return 'danger';

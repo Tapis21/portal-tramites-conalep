@@ -45,8 +45,10 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // Tus widgets personalizados
                 \App\Filament\Widgets\EstadisticasGenerales::class,
-                \App\Filament\Widgets\SolicitudesPendientes::class,
-                \App\Filament\Widgets\ProximasFinalizaciones::class,
+                \App\Filament\Widgets\SolicitudesPendientesSS::class,
+                \App\Filament\Widgets\SolicitudesPendientesPP::class,
+                \App\Filament\Widgets\ProximasFinalizacionesSS::class,
+                \App\Filament\Widgets\ProximasFinalizacionesPP::class,
             ])
             ->middleware([
                 EncryptCookies::class,
