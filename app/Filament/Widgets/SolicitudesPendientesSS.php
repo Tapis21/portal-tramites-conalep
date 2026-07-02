@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 
 class SolicitudesPendientesSS extends BaseWidget
 {
@@ -27,14 +28,17 @@ class SolicitudesPendientesSS extends BaseWidget
                     ->label('Estudiante')
                     ->searchable()
                     ->sortable(),
+                    
                 Tables\Columns\TextColumn::make('empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable(),
+                    
                 Tables\Columns\TextColumn::make('fecha_inicio')
                     ->label('Inicio')
                     ->date('d/m/Y')
                     ->sortable(),
+                    
                 Tables\Columns\TextColumn::make('estatus')
                     ->label('Estado')
                     ->badge()
@@ -52,10 +56,48 @@ class SolicitudesPendientesSS extends BaseWidget
                     }),
             ])
             ->actions([
-                Action::make('ver')
-                    ->label('Ver')
+                // 👇 BOTÓN APROBAR
+                Action::make('aprobar')
+                    ->label('Aprobar')
+                    ->color('success')
+                    ->icon('heroicon-o-check')
+                    ->button()
+                    ->hidden(fn ($record) => $record->estatus !== 'pendiente')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update(['estatus' => 'en_progreso']);
+                        
+                        Notification::make()
+                            ->title('Solicitud aprobada')
+                            ->body('La solicitud de ' . $record->user->name . ' ha sido aprobada.')
+                            ->success()
+                            ->send();
+                    }),
+                
+                // 👇 BOTÓN RECHAZAR
+                Action::make('rechazar')
+                    ->label('Rechazar')
+                    ->color('danger')
+                    ->icon('heroicon-o-x-mark')
+                    ->button()
+                    ->hidden(fn ($record) => $record->estatus !== 'pendiente')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update(['estatus' => 'no_solicitado']);
+                        
+                        Notification::make()
+                            ->title('Solicitud rechazada')
+                            ->body('La solicitud de ' . $record->user->name . ' ha sido rechazada.')
+                            ->danger()
+                            ->send();
+                    }),
+                
+                // 👇 BOTÓN EDITAR (antes "Ver")
+                Action::make('editar')
+                    ->label('Editar solicitud')
                     ->color('primary')
-                    ->icon('heroicon-o-eye')
+                    ->icon('heroicon-o-pencil-square')
+                    ->button()
                     ->url(fn ($record) => route('filament.admin.resources.servicio-socials.edit', $record)),
             ])
             ->emptyStateHeading('¡No hay solicitudes de Servicio Social pendientes!')

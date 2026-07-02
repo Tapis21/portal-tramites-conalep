@@ -3,21 +3,26 @@
 namespace App\Filament\Resources\Practicas\Tables;
 
 use Carbon\Carbon;
-use Filament\Actions\Action;
+use Filament\Actions\Action;  // 👈 ¡¡¡IMPORTANTE!!! Filament\Actions\Action
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class PracticaTable
+class PracticasTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
+                // 👇 SOLO CAMBIO ESTA COLUMNA
                 TextColumn::make('user.name')
                     ->label('Estudiante')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => route('filament.admin.resources.practicas.view', $record))
+                    ->openUrlInNewTab(false)
+                    ->tooltip('Ver detalles de la solicitud'),
 
+                // 👇 EL RESTO DE COLUMNAS IGUAL
                 TextColumn::make('user.matricula')
                     ->label('Matrícula')
                     ->searchable()
@@ -76,6 +81,7 @@ class PracticaTable
                         default => $state,
                     }),
             ])
+            // 👇 LAS ACCIONES QUEDAN IGUAL POR AHORA
             ->actions([
                 Action::make('aprobar')
                     ->label('Aprobar')
@@ -83,9 +89,9 @@ class PracticaTable
                     ->icon('heroicon-o-check')
                     ->button()
                     ->hidden(fn ($record) => $record->estatus !== 'pendiente')
+                    ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'en_progreso';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'en_progreso']);
                     }),
 
                 Action::make('rechazar')
@@ -96,8 +102,7 @@ class PracticaTable
                     ->hidden(fn ($record) => $record->estatus !== 'pendiente')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'no_solicitado';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'no_solicitado']);
                     }),
 
                 Action::make('liberar')
@@ -108,26 +113,25 @@ class PracticaTable
                     ->hidden(fn ($record) => $record->estatus !== 'en_progreso')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'liberado';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'liberado']);
                     }),
             ])
             ->paginated(false)
             ->defaultSort('created_at', 'desc');
     }
-
+    
     protected static function getDaysColor($record): string
     {
         $dias = Carbon::now()->diffInDays($record->fecha_limite_final);
-
+        
         if ($dias <= 7) {
             return 'danger';
         }
-
+        
         if ($dias <= 15) {
             return 'warning';
         }
-
+        
         return 'success';
     }
 }

@@ -5,8 +5,9 @@ namespace App\Filament\Resources\Practicas;
 use App\Filament\Resources\Practicas\Pages\CreatePractica;
 use App\Filament\Resources\Practicas\Pages\EditPractica;
 use App\Filament\Resources\Practicas\Pages\ListPracticas;
+use App\Filament\Resources\Practicas\Pages\ViewPractica;
 use App\Filament\Resources\Practicas\Schemas\PracticaForm;
-use App\Filament\Resources\Practicas\Tables\PracticaTable;
+use App\Filament\Resources\Practicas\Tables\PracticasTable;
 use App\Models\Practica;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -31,7 +32,7 @@ class PracticaResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return PracticaTable::configure($table);
+        return PracticasTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -45,6 +46,7 @@ class PracticaResource extends Resource
             'index' => ListPracticas::route('/'),
             'create' => CreatePractica::route('/create'),
             'edit' => EditPractica::route('/{record}/edit'),
+            'view' => ViewPractica::route('/{record}'),
         ];
     }
 }

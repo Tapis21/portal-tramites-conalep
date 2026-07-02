@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServicioSocialController;
+use App\Http\Controllers\DocumentoStatusController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\SolicitudServicioSocialController;
@@ -132,6 +133,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/practicas/{id}/rechazar-reporte-parcial', [PracticaController::class, 'rechazarReporteParcial'])->name('admin.practicas.rechazar-reporte-parcial');
     Route::post('/admin/practicas/{id}/validar-reporte-final', [PracticaController::class, 'validarReporteFinal'])->name('admin.practicas.validar-reporte-final');
     Route::post('/admin/practicas/{id}/rechazar-reporte-final', [PracticaController::class, 'rechazarReporteFinal'])->name('admin.practicas.rechazar-reporte-final');
+
+    Route::post('/admin/documentos/update-status', [DocumentoStatusController::class, 'update'])
+    ->name('filament.admin.resources.servicio-socials.update-document-status')
+    ->middleware(['auth']);
 });
 
 require __DIR__.'/auth.php';

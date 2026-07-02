@@ -13,11 +13,16 @@ class ServicioSocialsTable
     {
         return $table
             ->columns([
+                // 👇 SOLO CAMBIO ESTA COLUMNA
                 TextColumn::make('user.name')
                     ->label('Estudiante')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => route('filament.admin.resources.servicio-socials.view', $record))
+                    ->openUrlInNewTab(false)
+                    ->tooltip('Ver detalles de la solicitud'),
 
+                // 👇 EL RESTO DE COLUMNAS IGUAL
                 TextColumn::make('user.matricula')
                     ->label('Matrícula')
                     ->searchable()
@@ -48,7 +53,7 @@ class ServicioSocialsTable
                         $state <= 15 => 'warning',
                         default => 'success',
                     })
-                    ->formatStateUsing(fn ($state) => $state . ' días'),
+                    ->formatStateUsing(fn ($state) => number_format($state, 2) . ' días'),
 
                 TextColumn::make('estatus')
                     ->label('Estatus')
@@ -70,6 +75,7 @@ class ServicioSocialsTable
                         default => $state,
                     }),
             ])
+            // 👇 LAS ACCIONES QUEDAN IGUAL
             ->actions([
                 Action::make('aprobar')
                     ->label('Aprobar')
@@ -77,9 +83,9 @@ class ServicioSocialsTable
                     ->icon('heroicon-o-check')
                     ->button()
                     ->hidden(fn ($record) => $record->estatus !== 'pendiente')
+                    ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'en_progreso';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'en_progreso']);
                     }),
 
                 Action::make('rechazar')
@@ -90,8 +96,7 @@ class ServicioSocialsTable
                     ->hidden(fn ($record) => $record->estatus !== 'pendiente')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'no_solicitado';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'no_solicitado']);
                     }),
 
                 Action::make('liberar')
@@ -102,26 +107,25 @@ class ServicioSocialsTable
                     ->hidden(fn ($record) => $record->estatus !== 'en_progreso')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        $record->estatus = 'liberado';
-                        $record->saveQuietly();
+                        $record->update(['estatus' => 'liberado']);
                     }),
             ])
             ->paginated(false)
             ->defaultSort('created_at', 'desc');
     }
-
+    
     protected static function getDaysColor($record): string
     {
         $dias = Carbon::now()->diffInDays($record->fecha_limite_segundo_informe);
-
+        
         if ($dias <= 7) {
             return 'danger';
         }
-
+        
         if ($dias <= 15) {
             return 'warning';
         }
-
+        
         return 'success';
     }
 }

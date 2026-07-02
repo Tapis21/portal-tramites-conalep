@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ServicioSocials;
 use App\Filament\Resources\ServicioSocials\Pages\CreateServicioSocial;
 use App\Filament\Resources\ServicioSocials\Pages\EditServicioSocial;
 use App\Filament\Resources\ServicioSocials\Pages\ListServicioSocials;
+use App\Filament\Resources\ServicioSocials\Pages\ViewServicioSocial;
 use App\Filament\Resources\ServicioSocials\Schemas\ServicioSocialForm;
 use App\Filament\Resources\ServicioSocials\Tables\ServicioSocialsTable;
 use App\Models\ServicioSocial;
@@ -21,6 +22,8 @@ class ServicioSocialResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $navigationLabel = 'Servicio Social';
+
+    protected static ?string $pluralModelLabel = 'Servicio Social';
 
     protected static ?int $navigationSort = 2;
 
@@ -45,6 +48,7 @@ class ServicioSocialResource extends Resource
             'index' => ListServicioSocials::route('/'),
             'create' => CreateServicioSocial::route('/create'),
             'edit' => EditServicioSocial::route('/{record}/edit'),
+            'view' => ViewServicioSocial::route('/{record}'),
         ];
     }
 }

@@ -741,7 +741,7 @@ class ServicioSocialController extends Controller
         $user = $servicioSocial->user;
         
         $variables = [
-            'nombre_completo' => trim($user->name . '' . $user->apellidos),
+            'nombre_completo' => trim($user->name . ' ' . $user->apellidos),
             'nombre' => $user->name,
             'apellidos' => $user->apellidos,
             'matricula' => $user->matricula,

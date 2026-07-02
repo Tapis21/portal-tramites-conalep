@@ -42,7 +42,6 @@ class ServicioSocial extends Model
         return $this->belongsTo(User::class);
     }
 
-    // RELACIONES AGREGADAS
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
@@ -68,12 +67,8 @@ class ServicioSocial extends Model
         return $this->morphMany(Comentario::class, 'comentable');
     }
 
-    /**
-     * Verifica si todos los documentos obligatorios están subidos
-     */
     public function documentosCompletos()
     {
-        // Documentos administrativos requeridos
         $documentosRequeridos = [
             'Solicitud de Servicio Social',
             'Elección de Modalidad',
@@ -90,7 +85,6 @@ class ServicioSocial extends Model
             })
             ->count();
 
-        // Informes requeridos
         $informesSubidos = $this->reporte_parcial_subido && $this->reporte_final_subido;
 
         return $subidos === count($documentosRequeridos) && $informesSubidos;
@@ -98,31 +92,11 @@ class ServicioSocial extends Model
 
     protected static function booted()
     {
-        static::updated(function ($servicioSocial) {
-            $servicioSocial->user->update([
-                'estatus_servicio_social' => $servicioSocial->estatus
-            ]);
-        });
-
-        static::created(function ($servicioSocial) {
-            $servicioSocial->user->update([
-                'estatus_servicio_social' => $servicioSocial->estatus
-            ]);
-        });
-
+        // ✅ SOLO para cuando se elimina el registro
         static::deleted(function ($servicioSocial) {
             $servicioSocial->user->update([
                 'estatus_servicio_social' => 'no_solicitado'
             ]);
-        });
-
-        // Para cambios de estatus
-        static::updating(function ($servicioSocial) {
-            if ($servicioSocial->isDirty('estatus')) {
-                $servicioSocial->user()->update([
-                    'estatus_servicio_social' => $servicioSocial->estatus
-                ]);
-            }
         });
     }
 }
