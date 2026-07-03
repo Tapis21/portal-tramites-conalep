@@ -128,7 +128,86 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN INFORMACIÓN ADICIONAL CON ACTION NATIVO
                 Section::make('ℹ️ Información Adicional')
+                    ->footerActions([
+                        Actions\Action::make('cambiar_estatus_estudiante')
+                            ->label('Cambiar Estatus')
+                            ->icon('heroicon-o-pencil-square')
+                            ->color('primary')
+                            ->visible(fn () => Auth::user()->role === 'admin')
+                            ->form([
+                                Select::make('nuevo_estatus_estudiante')
+                                    ->label('Nuevo Estatus')
+                                    ->options([
+                                        'no_solicitado' => '⬜ No solicitado',
+                                        'pendiente' => '⏳ Pendiente',
+                                        'en_progreso' => '🔄 En progreso',
+                                        'liberado' => '✅ Liberado',
+                                    ])
+                                    ->default(fn ($record) => $record->estatus ?? 'no_solicitado')
+                                    ->required(),
+                                Textarea::make('comentario_estatus_estudiante')
+                                    ->label('Comentario (opcional)')
+                                    ->placeholder('Agrega un comentario sobre este cambio de estatus...')
+                                    ->rows(3)
+                                    ->maxLength(500),
+                            ])
+                            ->action(function (array $data) {
+                                $servicioSocial = ServicioSocial::where('user_id', $this->record->user_id)->first();
+                                
+                                if (!$servicioSocial) {
+                                    Notification::make()
+                                        ->title('Error')
+                                        ->body('No se encontró el registro de Servicio Social.')
+                                        ->danger()
+                                        ->send();
+                                    return;
+                                }
+
+                                if (empty($data['nuevo_estatus_estudiante'])) {
+                                    Notification::make()
+                                        ->title('Error')
+                                        ->body('Debes seleccionar un estatus.')
+                                        ->danger()
+                                        ->send();
+                                    return;
+                                }
+
+                                $estatusAnterior = $servicioSocial->estatus;
+                                
+                                $servicioSocial->update([
+                                    'estatus' => $data['nuevo_estatus_estudiante']
+                                ]);
+
+                                // Actualizar también el campo estatus_servicio_social en users
+                                $servicioSocial->user->update([
+                                    'estatus_servicio_social' => $data['nuevo_estatus_estudiante']
+                                ]);
+
+                                if (!empty($data['comentario_estatus_estudiante'])) {
+                                    Comentario::create([
+                                        'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
+                                        'tipo' => 'admin',
+                                        'comentable_type' => 'App\\Models\\ServicioSocial',
+                                        'comentable_id' => $servicioSocial->id,
+                                        'user_id' => Auth::id(),
+                                        'leido' => false
+                                    ]);
+                                }
+
+                                Notification::make()
+                                    ->title('✅ Estatus actualizado')
+                                    ->body("El estatus del estudiante ha sido cambiado correctamente.")
+                                    ->success()
+                                    ->send();
+
+                                $this->dispatch('refresh-table');
+                            })
+                            ->modalSubmitActionLabel('✅ Actualizar Estatus')
+                            ->modalCancelActionLabel('❌ Cancelar')
+                            ->modalWidth('md'),
+                    ])
                     ->schema([
                         TextEntry::make('apoyo_estudiante')
                             ->label('Apoyo al estudiante')
@@ -151,80 +230,14 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                 'no_solicitado' => 'No solicitado',
                                 default => $state,
                             })
-                            ->icon('heroicon-o-information-circle')
-                            ->extraAttributes(function ($record) {
-                                if (Auth::user()->role === 'admin') {
-                                    return [
-                                        'class' => 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg p-2',
-                                        'wire:click' => '$dispatch("open-modal", { id: "cambiar-estatus-estudiante" })',
-                                    ];
-                                }
-                                return [];
-                            }),
+                            ->icon('heroicon-o-information-circle'),
                     ])
                     ->columns(2),
             ]);
     }
 
-    // 🔥 Acción para actualizar estatus del estudiante
-    public function actualizarEstatusEstudiante()
-    {
-        $servicioSocial = ServicioSocial::where('user_id', $this->record->user_id)->first();
-        
-        if (!$servicioSocial) {
-            Notification::make()
-                ->title('Error')
-                ->body('No se encontró el registro de Servicio Social.')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        if (empty($this->nuevo_estatus_estudiante)) {
-            Notification::make()
-                ->title('Error')
-                ->body('Debes seleccionar un estatus.')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        $estatusAnterior = $servicioSocial->estatus;
-        
-        $servicioSocial->update([
-            'estatus' => $this->nuevo_estatus_estudiante
-        ]);
-
-        // Actualizar también el campo estatus_servicio_social en users
-        $servicioSocial->user->update([
-            'estatus_servicio_social' => $this->nuevo_estatus_estudiante
-        ]);
-
-        if (!empty($this->comentario_estatus_estudiante)) {
-            Comentario::create([
-                'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $this->nuevo_estatus_estudiante . '": ' . $this->comentario_estatus_estudiante,
-                'tipo' => 'admin',
-                'comentable_type' => 'App\\Models\\ServicioSocial',
-                'comentable_id' => $servicioSocial->id,
-                'user_id' => Auth::id(),
-                'leido' => false
-            ]);
-        }
-
-        $this->nuevo_estatus_estudiante = '';
-        $this->comentario_estatus_estudiante = '';
-
-        Notification::make()
-            ->title('Estatus actualizado')
-            ->body("El estatus del estudiante ha sido cambiado a: " . $this->nuevo_estatus_estudiante)
-            ->success()
-            ->send();
-
-        $this->dispatch('refresh-table');
-    }
-
-    // 🔥 Acción para agregar comentario
-    public function agregarComentario($documentoId)
+    // 🔥 Acción para agregar comentario (CON FORMULARIO NATIVO + DISEÑO MEJORADO)
+    public function agregarComentario($documentoId, $contenido)
     {
         $documento = Documento::find($documentoId);
         
@@ -237,7 +250,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
             return;
         }
 
-        if (empty($this->comentario_contenido)) {
+        if (empty($contenido)) {
             Notification::make()
                 ->title('Error')
                 ->body('El comentario no puede estar vacío.')
@@ -247,7 +260,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
         }
 
         Comentario::create([
-            'contenido' => $this->comentario_contenido,
+            'contenido' => $contenido,
             'tipo' => Auth::user()->role === 'admin' ? 'admin' : 'estudiante',
             'comentable_type' => 'App\\Models\\Documento',
             'comentable_id' => $documento->id,
@@ -255,19 +268,18 @@ class ViewServicioSocial extends ViewRecord implements HasTable
             'leido' => false
         ]);
 
-        $this->comentario_contenido = '';
-
         Notification::make()
-            ->title('Comentario agregado')
+            ->title('✅ Comentario agregado')
             ->body('Tu comentario ha sido agregado correctamente.')
             ->success()
             ->send();
 
         $this->dispatch('refresh-table');
+        $this->dispatch('close-modal', id: 'nuevo_comentario');
     }
 
-    // 🔥 Acción para cambiar estado del documento
-    public function cambiarEstado($documentoId)
+    // 🔥 Acción para cambiar estado del documento (CON FORMULARIO NATIVO + DISEÑO MEJORADO)
+    public function cambiarEstado($documentoId, $nuevoEstatus, $comentario)
     {
         $documento = Documento::find($documentoId);
         
@@ -280,7 +292,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
             return;
         }
 
-        if (empty($this->nuevo_estatus)) {
+        if (empty($nuevoEstatus)) {
             Notification::make()
                 ->title('Error')
                 ->body('Debes seleccionar un estado.')
@@ -290,13 +302,13 @@ class ViewServicioSocial extends ViewRecord implements HasTable
         }
 
         $documento->update([
-            'estatus' => $this->nuevo_estatus,
-            'comentario_admin' => $this->comentario_estado ?? null
+            'estatus' => $nuevoEstatus,
+            'comentario_admin' => $comentario ?? null
         ]);
 
-        if (!empty($this->comentario_estado)) {
+        if (!empty($comentario)) {
             Comentario::create([
-                'contenido' => 'Cambio de estado a "' . $this->nuevo_estatus . '": ' . $this->comentario_estado,
+                'contenido' => 'Cambio de estado a "' . $nuevoEstatus . '": ' . $comentario,
                 'tipo' => 'admin',
                 'comentable_type' => 'App\\Models\\Documento',
                 'comentable_id' => $documento->id,
@@ -305,16 +317,14 @@ class ViewServicioSocial extends ViewRecord implements HasTable
             ]);
         }
 
-        $this->nuevo_estatus = '';
-        $this->comentario_estado = '';
-
         Notification::make()
-            ->title('Estado actualizado')
-            ->body("El documento ha sido cambiado a: " . $this->nuevo_estatus)
+            ->title('✅ Estado actualizado')
+            ->body("El documento ha sido cambiado a: " . $nuevoEstatus)
             ->success()
             ->send();
 
         $this->dispatch('refresh-table');
+        $this->dispatch('close-modal', id: 'cambiar_estado');
     }
 
     public function table(Table $table): Table
@@ -415,38 +425,58 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                 // ✏️ Nuevo comentario
                 Action::make('nuevo_comentario')
                     ->label('Nuevo Comentario')
-                    ->icon('heroicon-o-plus-circle')
+                    ->icon('heroicon-o-chat-bubble-left-right')
                     ->color('success')
-                    ->modalHeading('Nuevo Comentario')
-                    ->modalContent(fn ($record) => view('filament.modals.nuevo-comentario-modal', [
-                        'record' => $record,
-                        'documentoId' => $record->id
-                    ]))
-                    ->modalActions([
-                        Action::make('cerrar')
-                            ->label('Cerrar')
-                            ->color('gray')
-                            ->action(fn () => $this->dispatch('close-modal', 'nuevo_comentario')),
+                    ->modalHeading('💬 Nuevo Comentario')
+                    ->modalDescription('📝 Agrega un comentario a este documento')
+                    ->form([
+                        Textarea::make('contenido')
+                            ->label('Comentario')
+                            ->placeholder('Escribe tu comentario aquí...')
+                            ->rows(4)
+                            ->required()
+                            ->maxLength(500)
+                            ->helperText('Máximo 500 caracteres'),
                     ])
+                    ->action(function (array $data, $record) {
+                        $this->agregarComentario($record->id, $data['contenido']);
+                    })
+                    ->modalSubmitActionLabel('✨ Enviar Comentario')
+                    ->modalCancelActionLabel('❌ Cancelar')
                     ->modalWidth('md'),
 
                 // ✏️ Cambiar estado del documento
                 Action::make('cambiar_estado')
                     ->label('Cambiar Estado')
-                    ->icon('heroicon-o-pencil-square')
+                    ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->visible(fn () => Auth::user()->role === 'admin')
-                    ->modalHeading('Cambiar Estado del Documento')
-                    ->modalContent(fn ($record) => view('filament.modals.cambiar-estado-modal', [
-                        'record' => $record,
-                        'documentoId' => $record->id
-                    ]))
-                    ->modalActions([
-                        Action::make('cerrar')
-                            ->label('Cerrar')
-                            ->color('gray')
-                            ->action(fn () => $this->dispatch('close-modal', 'cambiar_estado')),
+                    ->modalHeading('🔄 Cambiar Estado del Documento')
+                    ->modalDescription('📌 Selecciona el nuevo estado y opcionalmente agrega un comentario')
+                    ->form([
+                        Select::make('nuevo_estatus')
+                            ->label('Nuevo Estado')
+                            ->options([
+                                'pendiente' => '⏳ Pendiente',
+                                'validado' => '✅ Validado',
+                                'validado_ventanilla' => '📄 Validado en Ventanilla',
+                                'rechazado' => '❌ Rechazado',
+                            ])
+                            ->required()
+                            ->placeholder('Selecciona un estado...')
+                            ->helperText('Selecciona el estado que tendrá el documento'),
+                        Textarea::make('comentario')
+                            ->label('Comentario (opcional)')
+                            ->placeholder('Agrega un comentario sobre este cambio de estado...')
+                            ->rows(3)
+                            ->maxLength(500)
+                            ->helperText('Máximo 500 caracteres'),
                     ])
+                    ->action(function (array $data, $record) {
+                        $this->cambiarEstado($record->id, $data['nuevo_estatus'], $data['comentario'] ?? null);
+                    })
+                    ->modalSubmitActionLabel('✅ Actualizar Estado')
+                    ->modalCancelActionLabel('❌ Cancelar')
                     ->modalWidth('md'),
             ])
             ->emptyStateHeading('No hay documentos subidos')
