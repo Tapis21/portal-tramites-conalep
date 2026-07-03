@@ -137,6 +137,7 @@ class PracticaController extends Controller
         $practica->update([
             'reporte_parcial_subido' => true,
             'archivo_parcial' => $path,
+            'estatus_parcial' => 'pendiente', // ✅ Se reinicia a pendiente al subir
         ]);
 
         if ($request->filled('comentario')) {
@@ -149,8 +150,6 @@ class PracticaController extends Controller
             ]);
             $comentario->save();
         }
-
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Primer Informe subido correctamente.');
@@ -222,6 +221,7 @@ class PracticaController extends Controller
         $practica->update([
             'reporte_final_subido' => true,
             'archivo_final' => $path,
+            'estatus_final' => 'pendiente', // ✅ Se reinicia a pendiente al subir
         ]);
 
         if ($request->filled('comentario')) {
@@ -234,8 +234,6 @@ class PracticaController extends Controller
             ]);
             $comentario->save();
         }
-
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Segundo Informe subido correctamente.');
@@ -295,8 +293,6 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
-
         return redirect()->route('practicas.index')
             ->with('success', 'Solicitud subida correctamente.');
     }
@@ -354,8 +350,6 @@ class PracticaController extends Controller
             ]);
             $comentario->save();
         }
-
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Elección de Modalidad subida correctamente.');
@@ -415,8 +409,6 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
-
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Presentación subida correctamente.');
     }
@@ -474,8 +466,6 @@ class PracticaController extends Controller
             ]);
             $comentario->save();
         }
-
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
 
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Aceptación subida correctamente.');
@@ -535,8 +525,6 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
-
         return redirect()->route('practicas.index')
             ->with('success', 'Evaluación subida correctamente.');
     }
@@ -595,8 +583,6 @@ class PracticaController extends Controller
             $comentario->save();
         }
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE
-
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Liberación subida correctamente.');
     }
@@ -622,8 +608,6 @@ class PracticaController extends Controller
 
         $documento->update(['archivo_pdf' => null, 'estatus' => 'pendiente']);
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
-
         return redirect()->route('practicas.index')
             ->with('success', 'Documento eliminado correctamente.');
     }
@@ -638,66 +622,90 @@ class PracticaController extends Controller
             if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
                 unlink(storage_path('app/public/' . $practica->archivo_parcial));
             }
-            $practica->update(['reporte_parcial_subido' => false, 'archivo_parcial' => null]);
+            $practica->update([
+                'reporte_parcial_subido' => false,
+                'archivo_parcial' => null,
+                'estatus_parcial' => 'pendiente',
+            ]);
             $mensaje = 'Primer Informe eliminado correctamente.';
         } elseif ($tipo == 'segundo') {
             if ($practica->archivo_final && file_exists(storage_path('app/public/' . $practica->archivo_final))) {
                 unlink(storage_path('app/public/' . $practica->archivo_final));
             }
-            $practica->update(['reporte_final_subido' => false, 'archivo_final' => null]);
+            $practica->update([
+                'reporte_final_subido' => false,
+                'archivo_final' => null,
+                'estatus_final' => 'pendiente',
+            ]);
             $mensaje = 'Segundo Informe eliminado correctamente.';
         } else {
             return redirect()->route('practicas.index')->with('error', 'Tipo de informe no válido.');
         }
 
-        // . EL ESTATUS NO SE MODIFICA AUTOMÁTICAMENTE AL ELIMINAR
-
         return redirect()->route('practicas.index')->with('success', $mensaje);
     }
 
-    // Validar informe parcial (Primer Informe)
+    // ✅ Validar informe parcial (Primer Informe) - ACTUALIZADO
     public function validarReporteParcial($id)
     {
         $practica = Practica::findOrFail($id);
         $practica->update([
-            'reporte_parcial_validado' => true,
-            'reporte_parcial_rechazado' => false,
+            'estatus_parcial' => 'validado',
         ]);
 
         return redirect()->back()->with('success', 'Primer Informe validado correctamente.');
     }
 
-    // Rechazar informe parcial (Primer Informe)
+    // ✅ Validar en ventanilla (Primer Informe) - NUEVO
+    public function validarVentanillaReporteParcial($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'estatus_parcial' => 'validado_ventanilla',
+        ]);
+
+        return redirect()->back()->with('success', 'Primer Informe validado en ventanilla.');
+    }
+
+    // ✅ Rechazar informe parcial (Primer Informe) - ACTUALIZADO
     public function rechazarReporteParcial($id)
     {
         $practica = Practica::findOrFail($id);
         $practica->update([
-            'reporte_parcial_validado' => false,
-            'reporte_parcial_rechazado' => true,
+            'estatus_parcial' => 'rechazado',
         ]);
 
         return redirect()->back()->with('error', 'Primer Informe rechazado. El estudiante debe corregirlo.');
     }
 
-    // Validar informe final (Segundo Informe)
+    // ✅ Validar informe final (Segundo Informe) - ACTUALIZADO
     public function validarReporteFinal($id)
     {
         $practica = Practica::findOrFail($id);
         $practica->update([
-            'reporte_final_validado' => true,
-            'reporte_final_rechazado' => false,
+            'estatus_final' => 'validado',
         ]);
 
         return redirect()->back()->with('success', 'Segundo Informe validado correctamente.');
     }
 
-    // Rechazar informe final (Segundo Informe)
+    // ✅ Validar en ventanilla (Segundo Informe) - NUEVO
+    public function validarVentanillaReporteFinal($id)
+    {
+        $practica = Practica::findOrFail($id);
+        $practica->update([
+            'estatus_final' => 'validado_ventanilla',
+        ]);
+
+        return redirect()->back()->with('success', 'Segundo Informe validado en ventanilla.');
+    }
+
+    // ✅ Rechazar informe final (Segundo Informe) - ACTUALIZADO
     public function rechazarReporteFinal($id)
     {
         $practica = Practica::findOrFail($id);
         $practica->update([
-            'reporte_final_validado' => false,
-            'reporte_final_rechazado' => true,
+            'estatus_final' => 'rechazado',
         ]);
 
         return redirect()->back()->with('error', 'Segundo Informe rechazado. El estudiante debe corregirlo.');

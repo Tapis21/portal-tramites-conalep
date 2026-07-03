@@ -29,9 +29,11 @@ class Practica extends Model
         'horas_requeridas',
         'horas_completadas',
         'reporte_parcial_subido',
+        'estatus_parcial', // NUEVO
         'reporte_parcial_validado',
         'reporte_parcial_rechazado',
         'reporte_final_subido',
+        'estatus_final', // NUEVO
         'reporte_final_validado',
         'reporte_final_rechazado',
         'archivo_parcial',

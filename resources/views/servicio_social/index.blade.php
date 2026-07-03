@@ -177,10 +177,11 @@
                                         } else {
                                             $campo = $config['campo'];
                                             $estaSubido = $servicioSocial->$campo ?? false;
-                                            if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                $estaValidado = $servicioSocial->reporte_parcial_validado ?? false;
-                                            } else {
-                                                $estaValidado = $servicioSocial->reporte_final_validado ?? false;
+                                            
+                                            // ✅ NUEVA LÓGICA CON ESTATUS
+                                            $estatusInforme = $servicioSocial->estatus_parcial ?? 'pendiente';
+                                            if ($nombre == 'Segundo Informe de Actividades Trimestral') {
+                                                $estatusInforme = $servicioSocial->estatus_final ?? 'pendiente';
                                             }
                                             $doc = null;
                                         }
@@ -233,25 +234,28 @@
                                             <!-- Estado -->
                                             <div class="flex items-center md:col-span-3">
                                                 @if($config['tipo'] == 'informe')
+                                                    {{-- ✅ INFORMES: ACTUALIZADOS CON ESTATUS --}}
                                                     @php
-                                                        if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                            $validado = $servicioSocial->reporte_parcial_validado ?? false;
-                                                            $rechazado = $servicioSocial->reporte_parcial_rechazado ?? false;
-                                                        } else {
-                                                            $validado = $servicioSocial->reporte_final_validado ?? false;
-                                                            $rechazado = $servicioSocial->reporte_final_rechazado ?? false;
+                                                        $estatusInforme = $servicioSocial->estatus_parcial ?? 'pendiente';
+                                                        if ($nombre == 'Segundo Informe de Actividades Trimestral') {
+                                                            $estatusInforme = $servicioSocial->estatus_final ?? 'pendiente';
                                                         }
                                                     @endphp
                                                     
-                                                    @if($rechazado)
+                                                    @if($estatusInforme == 'rechazado')
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
                                                             <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
                                                             Rechazado
                                                         </span>
-                                                    @elseif($validado)
+                                                    @elseif($estatusInforme == 'validado_ventanilla')
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                                                             <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
-                                                            Validado
+                                                            Validado en Ventanilla
+                                                        </span>
+                                                    @elseif($estatusInforme == 'validado')
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
+                                                            Entregar en Ventanilla
                                                         </span>
                                                     @elseif($estaSubido)
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
@@ -265,14 +269,25 @@
                                                         </span>
                                                     @endif
                                                 @else
-                                                    {{-- Documentos administrativos --}}
+                                                    {{-- ✅ DOCUMENTOS ADMINISTRATIVOS: ACTUALIZADOS --}}
                                                     @if($estaSubido)
-                                                        @if($doc && $doc->estatus == 'validado')
+                                                        @php
+                                                            $estatusDoc = $doc->estatus ?? 'pendiente';
+                                                        @endphp
+                                                        
+                                                        @if($estatusDoc == 'validado_ventanilla')
+                                                            {{-- Validado en Ventanilla → VERDE --}}
                                                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                                                                 <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
-                                                                Validado
+                                                                Validado en Ventanilla
                                                             </span>
-                                                        @elseif($doc && $doc->estatus == 'rechazado')
+                                                        @elseif($estatusDoc == 'validado')
+                                                            {{-- Entregar en Ventanilla → AZUL --}}
+                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
+                                                                Entregar en Ventanilla
+                                                            </span>
+                                                        @elseif($estatusDoc == 'rechazado')
                                                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
                                                                 <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
                                                                 Rechazado
