@@ -14,6 +14,16 @@ Alpine.start();
 document.addEventListener('DOMContentLoaded', function() {
     const fechaInput = document.getElementById('fecha_inicio');
     if (fechaInput) {
+        // ✅ DETECTAR QUÉ FORMULARIO ES
+        const esServicioSocial = window.location.pathname.includes('servicio-social') || 
+                                document.querySelector('form[action*="servicio-social"]');
+        const esPracticas = window.location.pathname.includes('practicas') || 
+                           document.querySelector('form[action*="practicas"]');
+        
+        // ✅ DETERMINAR MESES A SUMAR
+        // Servicio Social = 6 meses, Prácticas = 4 meses
+        const mesesASumar = esServicioSocial ? 6 : (esPracticas ? 4 : 6);
+        
         flatpickr(fechaInput, {
             locale: 'es',
             dateFormat: "Y-m-d",
@@ -30,7 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (finalizacionInput && selectedDates[0]) {
                     var fechaInicio = selectedDates[0];
                     var fechaFin = new Date(fechaInicio);
-                    fechaFin.setMonth(fechaFin.getMonth() + 6);
+                    // ✅ USA EL VALOR DETECTADO (6 o 4 meses)
+                    fechaFin.setMonth(fechaFin.getMonth() + mesesASumar);
                     
                     var dia = fechaFin.getDay();
                     if (dia === 6) {
