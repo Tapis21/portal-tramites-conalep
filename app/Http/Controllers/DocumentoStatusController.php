@@ -12,7 +12,6 @@ class DocumentoStatusController extends Controller
 {
     public function update(Request $request)
     {
-        // Verificar que el usuario es admin
         if (auth()->user()->role !== 'admin') {
             abort(403, 'No tienes permisos para realizar esta acción.');
         }
@@ -30,27 +29,26 @@ class DocumentoStatusController extends Controller
                 'comentario_admin' => $request->comentario ?? $documento->comentario_admin,
             ]);
 
-            // Guardar comentario si existe
             if ($request->comentario) {
                 Comentario::create([
                     'contenido' => $request->comentario,
                     'tipo' => 'admin',
                     'user_id' => Auth::id(),
                     'comentable_id' => $documento->id,
-                    'comentable_type' => 'App\Models\Documento',
+                    'comentable_type' => 'App\\Models\\Documento',
                 ]);
             }
 
-            // Notificación de Filament
+            // Mensajes según el estado (SIN EMOJIS)
             $mensajes = [
-                'validado' => '✅ Documento validado correctamente.',
-                'validado_ventanilla' => '📄 Documento validado en ventanilla.',
-                'rechazado' => '❌ Documento rechazado.',
-                'pendiente' => '⏳ Estatus del documento restablecido a pendiente.',
+                'validado' => 'Documento validado correctamente.',
+                'validado_ventanilla' => 'Documento validado en ventanilla.',
+                'rechazado' => 'Documento rechazado.',
+                'pendiente' => 'Estatus del documento restablecido a pendiente.',
             ];
 
             Notification::make()
-                ->title('✅ Estatus actualizado')
+                ->title('Estatus actualizado')
                 ->body($mensajes[$request->estatus] ?? 'Estatus actualizado correctamente.')
                 ->success()
                 ->send();
@@ -59,7 +57,7 @@ class DocumentoStatusController extends Controller
 
         } catch (\Exception $e) {
             Notification::make()
-                ->title('❌ Error')
+                ->title('Error')
                 ->body('Ocurrió un error al actualizar el estatus: ' . $e->getMessage())
                 ->danger()
                 ->send();

@@ -30,7 +30,6 @@ class ViewPractica extends ViewRecord implements HasTable
     protected static string $resource = PracticaResource::class;
     protected string $view = 'filament.modals.view-practica';
 
-    // Variables para los modales
     public $comentario_contenido = '';
     public $nuevo_estatus = '';
     public $comentario_estado = '';
@@ -41,7 +40,8 @@ class ViewPractica extends ViewRecord implements HasTable
     {
         return $schema
             ->schema([
-                Section::make('👤 Datos del Estudiante')
+                Section::make('Datos del Estudiante')
+                    ->icon('heroicon-o-user-group')
                     ->schema([
                         TextEntry::make('user.name')
                             ->label('Nombre completo')
@@ -66,7 +66,8 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                Section::make('🏢 Datos de la Empresa')
+                Section::make('Datos de la Empresa')
+                    ->icon('heroicon-o-building-office-2')
                     ->schema([
                         TextEntry::make('empresa.nombre')
                             ->label('Empresa')
@@ -78,7 +79,8 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(2),
 
-                Section::make('📅 Fechas, Horas y Horario')
+                Section::make('Fechas, Horas y Horario')
+                    ->icon('heroicon-o-calendar-days')
                     ->schema([
                         TextEntry::make('fecha_inicio')
                             ->label('Fecha de inicio')
@@ -103,7 +105,8 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                Section::make('📋 Datos de Contacto')
+                Section::make('Datos de Contacto')
+                    ->icon('heroicon-o-phone')
                     ->schema([
                         TextEntry::make('gradoAcademico.abreviatura')
                             ->label('Grado (Carta)')
@@ -126,8 +129,8 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN INFORMACIÓN ADICIONAL CON ACTION NATIVO
-                Section::make('ℹ️ Información Adicional')
+                Section::make('Información Adicional')
+                    ->icon('heroicon-o-information-circle')
                     ->footerActions([
                         Actions\Action::make('cambiar_estatus_estudiante')
                             ->label('Cambiar Estatus')
@@ -138,10 +141,10 @@ class ViewPractica extends ViewRecord implements HasTable
                                 Select::make('nuevo_estatus_estudiante')
                                     ->label('Nuevo Estatus')
                                     ->options([
-                                        'no_solicitado' => '⬜ No solicitado',
-                                        'pendiente' => '⏳ Pendiente',
-                                        'en_progreso' => '🔄 En progreso',
-                                        'liberado' => '✅ Liberado',
+                                        'no_solicitado' => 'No solicitado',
+                                        'pendiente' => 'Pendiente',
+                                        'en_progreso' => 'En progreso',
+                                        'liberado' => 'Liberado',
                                     ])
                                     ->default(fn ($record) => $record->estatus ?? 'no_solicitado')
                                     ->required(),
@@ -178,7 +181,6 @@ class ViewPractica extends ViewRecord implements HasTable
                                     'estatus' => $data['nuevo_estatus_estudiante']
                                 ]);
 
-                                // Actualizar también el campo estatus_practicas en users
                                 $practica->user->update([
                                     'estatus_practicas' => $data['nuevo_estatus_estudiante']
                                 ]);
@@ -195,15 +197,15 @@ class ViewPractica extends ViewRecord implements HasTable
                                 }
 
                                 Notification::make()
-                                    ->title('✅ Estatus actualizado')
-                                    ->body("El estatus del estudiante ha sido cambiado correctamente.")
+                                    ->title('Estatus actualizado')
+                                    ->body('El estatus del estudiante ha sido cambiado correctamente.')
                                     ->success()
                                     ->send();
 
                                 $this->dispatch('refresh-table');
                             })
-                            ->modalSubmitActionLabel('✅ Actualizar Estatus')
-                            ->modalCancelActionLabel('❌ Cancelar')
+                            ->modalSubmitActionLabel('Actualizar Estatus')
+                            ->modalCancelActionLabel('Cancelar')
                             ->modalWidth('md'),
                     ])
                     ->schema([
@@ -234,7 +236,6 @@ class ViewPractica extends ViewRecord implements HasTable
             ]);
     }
 
-    // 🔥 Acción para agregar comentario
     public function agregarComentario($documentoId, $contenido)
     {
         $documento = Documento::find($documentoId);
@@ -267,7 +268,7 @@ class ViewPractica extends ViewRecord implements HasTable
         ]);
 
         Notification::make()
-            ->title('✅ Comentario agregado')
+            ->title('Comentario agregado')
             ->body('Tu comentario ha sido agregado correctamente.')
             ->success()
             ->send();
@@ -276,7 +277,6 @@ class ViewPractica extends ViewRecord implements HasTable
         $this->dispatch('close-modal', id: 'nuevo_comentario');
     }
 
-    // 🔥 Acción para cambiar estado del documento
     public function cambiarEstado($documentoId, $nuevoEstatus, $comentario)
     {
         $documento = Documento::find($documentoId);
@@ -316,7 +316,7 @@ class ViewPractica extends ViewRecord implements HasTable
         }
 
         Notification::make()
-            ->title('✅ Estado actualizado')
+            ->title('Estado actualizado')
             ->body("El documento ha sido cambiado a: " . $nuevoEstatus)
             ->success()
             ->send();
@@ -363,17 +363,17 @@ class ViewPractica extends ViewRecord implements HasTable
                     ->label('Estado')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'validado' => 'success',
-                        'validado_ventanilla' => 'info',
+                        'validado' => 'blue',
+                        'validado_ventanilla' => 'success',
                         'rechazado' => 'danger',
                         'pendiente' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'validado' => '✅ Validado',
-                        'validado_ventanilla' => '📄 Validado en Ventanilla',
-                        'rechazado' => '❌ Rechazado',
-                        'pendiente' => '⏳ Pendiente',
+                        'validado' => 'Entregar en Ventanilla',
+                        'validado_ventanilla' => 'Validado en Ventanilla',
+                        'rechazado' => 'Rechazado',
+                        'pendiente' => 'Pendiente',
                         default => $state,
                     }),
             ])
@@ -388,7 +388,6 @@ class ViewPractica extends ViewRecord implements HasTable
                 );
             })
             ->actions([
-                // 👁️ Ver PDF
                 Action::make('ver_pdf')
                     ->label('Ver PDF')
                     ->icon('heroicon-o-eye')
@@ -400,7 +399,6 @@ class ViewPractica extends ViewRecord implements HasTable
                     ->modalCancelActionLabel('Cerrar')
                     ->modalWidth('6xl'),
 
-                // 💬 Ver comentarios
                 Action::make('ver_comentarios')
                     ->label('Ver Comentarios')
                     ->icon('heroicon-o-chat-bubble-left-right')
@@ -412,13 +410,12 @@ class ViewPractica extends ViewRecord implements HasTable
                     ->modalCancelActionLabel('Cerrar')
                     ->modalWidth('lg'),
 
-                // ✏️ Nuevo comentario
                 Action::make('nuevo_comentario')
                     ->label('Nuevo Comentario')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->color('success')
-                    ->modalHeading('💬 Nuevo Comentario')
-                    ->modalDescription('📝 Agrega un comentario a este documento')
+                    ->modalHeading('Nuevo Comentario')
+                    ->modalDescription('Agrega un comentario a este documento')
                     ->form([
                         Textarea::make('contenido')
                             ->label('Comentario')
@@ -431,26 +428,25 @@ class ViewPractica extends ViewRecord implements HasTable
                     ->action(function (array $data, $record) {
                         $this->agregarComentario($record->id, $data['contenido']);
                     })
-                    ->modalSubmitActionLabel('✨ Enviar Comentario')
-                    ->modalCancelActionLabel('❌ Cancelar')
+                    ->modalSubmitActionLabel('Enviar Comentario')
+                    ->modalCancelActionLabel('Cancelar')
                     ->modalWidth('md'),
 
-                // ✏️ Cambiar estado del documento
                 Action::make('cambiar_estado')
                     ->label('Cambiar Estado')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->visible(fn () => Auth::user()->role === 'admin')
-                    ->modalHeading('🔄 Cambiar Estado del Documento')
-                    ->modalDescription('📌 Selecciona el nuevo estado y opcionalmente agrega un comentario')
+                    ->modalHeading('Cambiar Estado del Documento')
+                    ->modalDescription('Selecciona el nuevo estado y opcionalmente agrega un comentario')
                     ->form([
                         Select::make('nuevo_estatus')
                             ->label('Nuevo Estado')
                             ->options([
-                                'pendiente' => '⏳ Pendiente',
-                                'validado' => '✅ Validado',
-                                'validado_ventanilla' => '📄 Validado en Ventanilla',
-                                'rechazado' => '❌ Rechazado',
+                                'pendiente' => 'Pendiente',
+                                'validado' => 'Entregar en Ventanilla',
+                                'validado_ventanilla' => 'Validado en Ventanilla',
+                                'rechazado' => 'Rechazado',
                             ])
                             ->required()
                             ->placeholder('Selecciona un estado...')
@@ -465,8 +461,8 @@ class ViewPractica extends ViewRecord implements HasTable
                     ->action(function (array $data, $record) {
                         $this->cambiarEstado($record->id, $data['nuevo_estatus'], $data['comentario'] ?? null);
                     })
-                    ->modalSubmitActionLabel('✅ Actualizar Estado')
-                    ->modalCancelActionLabel('❌ Cancelar')
+                    ->modalSubmitActionLabel('Actualizar Estado')
+                    ->modalCancelActionLabel('Cancelar')
                     ->modalWidth('md'),
             ])
             ->emptyStateHeading('No hay documentos subidos')
@@ -477,8 +473,8 @@ class ViewPractica extends ViewRecord implements HasTable
     protected function getStatusColor(string $status): string
     {
         return match ($status) {
-            'validado' => 'green',
-            'validado_ventanilla' => 'blue',
+            'validado' => 'blue',
+            'validado_ventanilla' => 'success',
             'rechazado' => 'red',
             'pendiente' => 'yellow',
             default => 'gray',
@@ -488,10 +484,10 @@ class ViewPractica extends ViewRecord implements HasTable
     protected function getStatusLabel(string $status): string
     {
         return match ($status) {
-            'validado' => '✅ Validado',
-            'validado_ventanilla' => '📄 Validado en Ventanilla',
-            'rechazado' => '❌ Rechazado',
-            'pendiente' => '⏳ Pendiente',
+            'validado' => 'Entregar en Ventanilla',
+            'validado_ventanilla' => 'Validado en Ventanilla',
+            'rechazado' => 'Rechazado',
+            'pendiente' => 'Pendiente',
             default => $status,
         };
     }
