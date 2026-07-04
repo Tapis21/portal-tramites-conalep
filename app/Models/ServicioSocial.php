@@ -24,16 +24,6 @@ class ServicioSocial extends Model
         'fecha_inicio',
         'fecha_limite_primer_informe',
         'fecha_limite_segundo_informe',
-        'reporte_parcial_subido',
-        'estatus_parcial', // NUEVO
-        'reporte_parcial_validado',
-        'reporte_parcial_rechazado',
-        'reporte_final_subido',
-        'estatus_final', // NUEVO
-        'reporte_final_validado',
-        'reporte_final_rechazado',
-        'archivo_parcial',
-        'archivo_final',
         'estatus',
         'horario_id',
         'grado_academico_jefe_id'
@@ -77,24 +67,24 @@ class ServicioSocial extends Model
             'Carta de Presentación de Servicio Social',
             'Carta de Aceptación',
             'Evaluación de Competencias del Desempeño',
-            'Carta de Liberación de Servicio Social'
+            'Carta de Liberación de Servicio Social',
+            'Primer Informe de Actividades Trimestral',
+            'Segundo Informe de Actividades Trimestral'
         ];
 
         $subidos = Documento::where('user_id', $this->user_id)
             ->where('activo', true)
             ->whereHas('tipoDocumento', function($q) use ($documentosRequeridos) {
-                $q->whereIn('nombre', $documentosRequeridos);
+                $q->whereIn('nombre', $documentosRequeridos)
+                  ->where('tramite', 'SS');
             })
             ->count();
 
-        $informesSubidos = $this->reporte_parcial_subido && $this->reporte_final_subido;
-
-        return $subidos === count($documentosRequeridos) && $informesSubidos;
+        return $subidos === count($documentosRequeridos);
     }
 
     protected static function booted()
     {
-        // ✅ SOLO para cuando se elimina el registro
         static::deleted(function ($servicioSocial) {
             $servicioSocial->user->update([
                 'estatus_servicio_social' => 'no_solicitado'

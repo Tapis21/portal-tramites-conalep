@@ -28,16 +28,6 @@ class Practica extends Model
         'fecha_limite_final',
         'horas_requeridas',
         'horas_completadas',
-        'reporte_parcial_subido',
-        'estatus_parcial', // NUEVO
-        'reporte_parcial_validado',
-        'reporte_parcial_rechazado',
-        'reporte_final_subido',
-        'estatus_final', // NUEVO
-        'reporte_final_validado',
-        'reporte_final_rechazado',
-        'archivo_parcial',
-        'archivo_final',
         'estatus',
     ];
 
@@ -71,32 +61,28 @@ class Practica extends Model
         return $this->belongsTo(Horario::class);
     }
 
-    /**
-     * Verifica si todos los documentos obligatorios están subidos
-     */
     public function documentosCompletos()
     {
-        // Documentos administrativos requeridos (los que están en tabla documentos)
         $documentosRequeridos = [
             'Solicitud de Prácticas Profesionales',
             'Elección de Modalidad',
             'Carta de Presentación de Prácticas Profesionales',
             'Carta de Aceptación',
             'Evaluación de Competencias del Desempeño',
-            'Carta de Liberación de Prácticas Profesionales'
+            'Carta de Liberación de Prácticas Profesionales',
+            'Primer Informe de Actividades',
+            'Segundo Informe de Actividades'
         ];
 
         $subidos = Documento::where('user_id', $this->user_id)
             ->where('activo', true)
             ->whereHas('tipoDocumento', function($q) use ($documentosRequeridos) {
-                $q->whereIn('nombre', $documentosRequeridos);
+                $q->whereIn('nombre', $documentosRequeridos)
+                  ->where('tramite', 'PP');
             })
             ->count();
 
-        // Informes requeridos (Primer y Segundo Informe)
-        $informesSubidos = $this->reporte_parcial_subido && $this->reporte_final_subido;
-
-        return $subidos === count($documentosRequeridos) && $informesSubidos;
+        return $subidos === count($documentosRequeridos);
     }
 
     protected static function booted()

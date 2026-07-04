@@ -26,17 +26,21 @@ class ServicioSocialController extends Controller
             return view('servicio_social.no_solicitado');
         }
 
+        // ✅ AGREGAR INFORMES A LA LISTA DE DOCUMENTOS
         $documentosAdministrativos = [
             'Solicitud de Servicio Social',
             'Elección de Modalidad',
             'Carta de Presentación de Servicio Social',
             'Carta de Aceptación',
+            'Primer Informe de Actividades Trimestral',   // ✅ NUEVO
+            'Segundo Informe de Actividades Trimestral',  // ✅ NUEVO
             'Evaluación de Competencias del Desempeño',
             'Carta de Liberación de Servicio Social'
         ];
 
         $comentariosPorDocumento = [];
 
+        // ✅ TODOS los documentos (incluyendo informes) se buscan en documentos
         foreach ($documentosAdministrativos as $nombre) {
             $doc = Documento::where('user_id', Auth::id())
                 ->whereHas('tipoDocumento', function($q) use ($nombre) {
@@ -55,13 +59,13 @@ class ServicioSocialController extends Controller
             }
         }
 
-        $comentariosPorInforme = [
-            'primero' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
-            'segundo' => $servicioSocial->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\ServicioSocial')->get(),
-        ];
-
-        return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento', 'comentariosPorInforme'));
+        // ❌ ELIMINAR $comentariosPorInforme
+        return view('servicio_social.index', compact('servicioSocial', 'comentariosPorDocumento'));
     }
+
+    // ============================================================
+    // 📌 REPORTE PARCIAL (Primer Informe)
+    // ============================================================
 
     // Mostrar formulario para subir reporte parcial (Primer Informe)
     public function mostrarFormularioReporteParcial($id)
@@ -74,9 +78,9 @@ class ServicioSocialController extends Controller
 
         $fechaLimite = $servicioSocial->fecha_limite_primer_informe;
         $fechaHoy = now()->startOfDay();
-        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        $fechaFormateada = $fechaLimite ? Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        $fechaInicio = $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio) : null;
+        $fechaInicio = $servicioSocial->fecha_inicio ? Carbon::parse($servicioSocial->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
@@ -93,7 +97,7 @@ class ServicioSocialController extends Controller
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
         if ($diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
                 ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
@@ -101,7 +105,7 @@ class ServicioSocialController extends Controller
         $estaVencido = $diasRestantes < -5;
 
         if ($diasRestantes < 0 && $diasRestantes >= -5) {
-            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            $fechaFinPrórroga = Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
             session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
@@ -117,6 +121,7 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
+        // ✅ VALIDACIONES DE FECHAS (se mantienen igual)
         $fechaLimite = $servicioSocial->fecha_limite_primer_informe;
         $fechaHoy = now()->startOfDay();
 
@@ -128,35 +133,63 @@ class ServicioSocialController extends Controller
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
         if ($diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
+        // ✅ VALIDACIÓN DEL ARCHIVO
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
-            unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
+        // ✅ BUSCAR TIPO DE DOCUMENTO (igual que subirModalidad)
+        $tipoDocumento = TipoDocumento::where('nombre', 'Primer Informe de Actividades Trimestral')
+            ->where('tramite', 'SS')
+            ->first();
+
+        if (!$tipoDocumento) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
         }
 
+        // ✅ GUARDAR EN DOCUMENTOS (igual que subirModalidad)
         $path = $request->file('reporte_pdf')->store('reportes_ss_parcial', 'public');
 
-        $servicioSocial->update([
-            'reporte_parcial_subido' => true,
-            'archivo_parcial' => $path,
-            'estatus_parcial' => 'pendiente', // ✅ Se reinicia a pendiente al subir
-        ]);
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
-        if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
-                'contenido' => $request->comentario,
-                'tipo' => 'estudiante_primer_informe',
+        if ($documento) {
+            // ✅ DOCUMENTO EXISTENTE: SOLO actualizar archivo, NO el estatus
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
+        } else {
+            // ✅ DOCUMENTO NUEVO: estatus = 'pendiente'
+            $documento = Documento::create([
                 'user_id' => Auth::id(),
-                'comentable_id' => $servicioSocial->id,
-                'comentable_type' => 'App\Models\ServicioSocial',
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        // ✅ COMENTARIOS (igual que subirModalidad)
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
         }
@@ -164,6 +197,10 @@ class ServicioSocialController extends Controller
         return redirect()->route('servicio-social.index')
             ->with('success', 'Primer Informe subido correctamente.');
     }
+
+    // ============================================================
+    // 📌 REPORTE FINAL (Segundo Informe)
+    // ============================================================
 
     // Mostrar formulario para subir reporte final (Segundo Informe)
     public function mostrarFormularioReporteFinal($id)
@@ -176,9 +213,9 @@ class ServicioSocialController extends Controller
 
         $fechaLimite = $servicioSocial->fecha_limite_segundo_informe;
         $fechaHoy = now()->startOfDay();
-        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        $fechaFormateada = $fechaLimite ? Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        $fechaInicio = $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio) : null;
+        $fechaInicio = $servicioSocial->fecha_inicio ? Carbon::parse($servicioSocial->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
@@ -195,7 +232,7 @@ class ServicioSocialController extends Controller
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
         if ($diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
                 ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
@@ -203,7 +240,7 @@ class ServicioSocialController extends Controller
         $estaVencido = $diasRestantes < -5;
 
         if ($diasRestantes < 0 && $diasRestantes >= -5) {
-            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            $fechaFinPrórroga = Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
             session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
@@ -219,6 +256,7 @@ class ServicioSocialController extends Controller
             abort(403);
         }
 
+        // ✅ VALIDACIONES DE FECHAS (se mantienen igual)
         $fechaLimite = $servicioSocial->fecha_limite_segundo_informe;
         $fechaHoy = now()->startOfDay();
 
@@ -230,35 +268,63 @@ class ServicioSocialController extends Controller
         $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
 
         if ($diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             return redirect()->route('servicio-social.index')
-                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
+        // ✅ VALIDACIÓN DEL ARCHIVO
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
-            unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
+        // ✅ BUSCAR TIPO DE DOCUMENTO (igual que subirModalidad)
+        $tipoDocumento = TipoDocumento::where('nombre', 'Segundo Informe de Actividades Trimestral')
+            ->where('tramite', 'SS')
+            ->first();
+
+        if (!$tipoDocumento) {
+            return redirect()->route('servicio-social.index')
+                ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
         }
 
+        // ✅ GUARDAR EN DOCUMENTOS (igual que subirModalidad)
         $path = $request->file('reporte_pdf')->store('reportes_ss_final', 'public');
 
-        $servicioSocial->update([
-            'reporte_final_subido' => true,
-            'archivo_final' => $path,
-            'estatus_final' => 'pendiente', // ✅ Se reinicia a pendiente al subir
-        ]);
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
-        if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
-                'contenido' => $request->comentario,
-                'tipo' => 'estudiante_segundo_informe',
+        if ($documento) {
+            // ✅ DOCUMENTO EXISTENTE: SOLO actualizar archivo, NO el estatus
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
+        } else {
+            // ✅ DOCUMENTO NUEVO: estatus = 'pendiente'
+            $documento = Documento::create([
                 'user_id' => Auth::id(),
-                'comentable_id' => $servicioSocial->id,
-                'comentable_type' => 'App\Models\ServicioSocial',
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        // ✅ COMENTARIOS (igual que subirModalidad)
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
         }
@@ -266,6 +332,10 @@ class ServicioSocialController extends Controller
         return redirect()->route('servicio-social.index')
             ->with('success', 'Segundo Informe subido correctamente.');
     }
+
+    // ============================================================
+    // 📌 DOCUMENTOS ADMINISTRATIVOS (SIN CAMBIOS)
+    // ============================================================
 
     // Mostrar formulario para subir solicitud
     public function mostrarFormularioSolicitud($id)
@@ -299,7 +369,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/solicitudes', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -356,7 +433,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/modalidad', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -413,7 +497,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_presentacion', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -470,7 +561,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_aceptacion', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -527,7 +625,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/evaluacion', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -584,7 +689,14 @@ class ServicioSocialController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/liberacion', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -608,6 +720,10 @@ class ServicioSocialController extends Controller
 
         return redirect()->route('servicio-social.index')->with('success', 'Carta de Liberación subida correctamente.');
     }
+
+    // ============================================================
+    // 📌 ELIMINAR DOCUMENTO (GENERAL - PARA TODOS LOS DOCUMENTOS)
+    // ============================================================
 
     // Eliminar un documento específico
     public function eliminarDocumento($id, $tipoDocumentoNombre)
@@ -634,108 +750,9 @@ class ServicioSocialController extends Controller
             ->with('success', 'Documento eliminado correctamente. Puedes volver a subirlo sin perder el historial de comentarios.');
     }
 
-    // Eliminar un informe (Primer o Segundo Informe)
-    public function eliminarInforme($id, $tipo)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        if ($servicioSocial->user_id !== Auth::id()) abort(403);
-
-        if ($tipo == 'primero') {
-            if ($servicioSocial->archivo_parcial && file_exists(storage_path('app/public/' . $servicioSocial->archivo_parcial))) {
-                unlink(storage_path('app/public/' . $servicioSocial->archivo_parcial));
-            }
-            $servicioSocial->update([
-                'reporte_parcial_subido' => false,
-                'archivo_parcial' => null,
-                'estatus_parcial' => 'pendiente',
-            ]);
-            $mensaje = 'Primer Informe eliminado correctamente.';
-        } elseif ($tipo == 'segundo') {
-            if ($servicioSocial->archivo_final && file_exists(storage_path('app/public/' . $servicioSocial->archivo_final))) {
-                unlink(storage_path('app/public/' . $servicioSocial->archivo_final));
-            }
-            $servicioSocial->update([
-                'reporte_final_subido' => false,
-                'archivo_final' => null,
-                'estatus_final' => 'pendiente',
-            ]);
-            $mensaje = 'Segundo Informe eliminado correctamente.';
-        } else {
-            return redirect()->route('servicio-social.index')->with('error', 'Tipo de informe no válido.');
-        }
-
-        return redirect()->route('servicio-social.index')->with('success', $mensaje);
-    }
-
-    // ✅ Validar informe parcial (Primer Informe) - ACTUALIZADO
-    public function validarReporteParcial($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_parcial' => 'validado',
-        ]);
-
-        return redirect()->back()->with('success', 'Primer Informe validado correctamente.');
-    }
-
-    // ✅ Validar en ventanilla (Primer Informe) - NUEVO
-    public function validarVentanillaReporteParcial($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_parcial' => 'validado_ventanilla',
-        ]);
-
-        return redirect()->back()->with('success', 'Primer Informe validado en ventanilla.');
-    }
-
-    // ✅ Rechazar informe parcial (Primer Informe) - ACTUALIZADO
-    public function rechazarReporteParcial($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_parcial' => 'rechazado',
-        ]);
-
-        return redirect()->back()->with('error', 'Primer Informe rechazado. El estudiante debe corregirlo.');
-    }
-
-    // ✅ Validar informe final (Segundo Informe) - ACTUALIZADO
-    public function validarReporteFinal($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_final' => 'validado',
-        ]);
-
-        return redirect()->back()->with('success', 'Segundo Informe validado correctamente.');
-    }
-
-    // ✅ Validar en ventanilla (Segundo Informe) - NUEVO
-    public function validarVentanillaReporteFinal($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_final' => 'validado_ventanilla',
-        ]);
-
-        return redirect()->back()->with('success', 'Segundo Informe validado en ventanilla.');
-    }
-
-    // ✅ Rechazar informe final (Segundo Informe) - ACTUALIZADO
-    public function rechazarReporteFinal($id)
-    {
-        $servicioSocial = ServicioSocial::findOrFail($id);
-        $servicioSocial->update([
-            'estatus_final' => 'rechazado',
-        ]);
-
-        return redirect()->back()->with('error', 'Segundo Informe rechazado. El estudiante debe corregirlo.');
-    }
-
-    // ==============================================
-    // DESCARGA DE WORD RELLENO (USANDO PHPWORD)
-    // ==============================================
+    // ============================================================
+    // 📌 DESCARGA DE WORD RELLENO (USANDO PHPWORD)
+    // ============================================================
     public function descargarWordRelleno($id)
     {
         $servicioSocial = ServicioSocial::with('user', 'empresa', 'gradoAcademico', 'horario', 'gradoAcademicoJefe')->findOrFail($id);

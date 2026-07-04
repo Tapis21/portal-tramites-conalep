@@ -34,22 +34,26 @@ class PracticaController extends Controller
             return view('practicas.no_solicitado');
         }
 
+        // ✅ AGREGAR INFORMES A LA LISTA DE DOCUMENTOS
         $documentosAdministrativos = [
             'Solicitud de Prácticas Profesionales',
             'Elección de Modalidad',
             'Carta de Presentación de Prácticas Profesionales',
             'Carta de Aceptación',
+            'Primer Informe de Actividades',   // ✅ NUEVO
+            'Segundo Informe de Actividades',  // ✅ NUEVO
             'Evaluación de Competencias del Desempeño',
             'Carta de Liberación de Prácticas Profesionales'
         ];
 
         $comentariosPorDocumento = [];
 
+        // ✅ TODOS los documentos (incluyendo informes) se buscan en documentos
         foreach ($documentosAdministrativos as $nombre) {
             $doc = Documento::where('user_id', Auth::id())
                 ->whereHas('tipoDocumento', function($q) use ($nombre) {
                     $q->where('nombre', $nombre)
-                    ->where('tramite', 'PP');
+                      ->where('tramite', 'PP');
                 })
                 ->where('activo', true)
                 ->first();
@@ -63,13 +67,13 @@ class PracticaController extends Controller
             }
         }
 
-        $comentariosPorInforme = [
-            'primero' => $practica->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\Practica')->get(),
-            'segundo' => $practica->comentarios()->where('tipo', 'admin')->where('comentable_type', 'App\Models\Practica')->get(),
-        ];
-
-        return view('practicas.index', compact('practica', 'comentariosPorDocumento', 'comentariosPorInforme'));
+        // ❌ ELIMINAR $comentariosPorInforme
+        return view('practicas.index', compact('practica', 'comentariosPorDocumento'));
     }
+
+    // ============================================================
+    // 📌 REPORTE PARCIAL (Primer Informe - 180h)
+    // ============================================================
 
     // Mostrar formulario para subir reporte parcial (Primer Informe - 180h)
     public function mostrarFormularioReporteParcial($id)
@@ -82,9 +86,9 @@ class PracticaController extends Controller
 
         $fechaLimite = $practica->fecha_limite_parcial;
         $fechaHoy = now()->startOfDay();
-        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        $fechaFormateada = $fechaLimite ? Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
+        $fechaInicio = $practica->fecha_inicio ? Carbon::parse($practica->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
@@ -102,12 +106,12 @@ class PracticaController extends Controller
         }
 
         if ($diasRestantes !== null && $diasRestantes < 0 && $diasRestantes >= -5) {
-            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            $fechaFinPrórroga = Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
             session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
         if ($diasRestantes !== null && $diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             session()->flash('info', 'La fecha límite para subir es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
@@ -123,30 +127,75 @@ class PracticaController extends Controller
             abort(403);
         }
 
+        // ✅ VALIDACIONES DE FECHAS (se mantienen igual)
+        $fechaLimite = $practica->fecha_limite_parcial;
+        $fechaHoy = now()->startOfDay();
+
+        if (!$fechaLimite) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'No hay fecha límite definida para el Primer Informe.');
+        }
+
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        if ($diasRestantes > 5) {
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Primer Informe. La fecha límite es el ' . Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        // ✅ VALIDACIÓN DEL ARCHIVO
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
-            unlink(storage_path('app/public/' . $practica->archivo_parcial));
+        // ✅ BUSCAR TIPO DE DOCUMENTO (igual que subirSolicitud)
+        $tipoDocumento = TipoDocumento::where('nombre', 'Primer Informe de Actividades')
+            ->where('tramite', 'PP')
+            ->first();
+
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
         }
 
+        // ✅ GUARDAR EN DOCUMENTOS (igual que subirSolicitud)
         $path = $request->file('reporte_pdf')->store('reportes_pp_parcial', 'public');
 
-        $practica->update([
-            'reporte_parcial_subido' => true,
-            'archivo_parcial' => $path,
-            'estatus_parcial' => 'pendiente', // ✅ Se reinicia a pendiente al subir
-        ]);
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
-        if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
-                'contenido' => $request->comentario,
-                'tipo' => 'estudiante_primer_informe',
+        if ($documento) {
+            // ✅ DOCUMENTO EXISTENTE: SOLO actualizar archivo, NO el estatus
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
+        } else {
+            // ✅ DOCUMENTO NUEVO: estatus = 'pendiente'
+            $documento = Documento::create([
                 'user_id' => Auth::id(),
-                'comentable_id' => $practica->id,
-                'comentable_type' => 'App\Models\Practica',
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        // ✅ COMENTARIOS (igual que subirSolicitud)
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
         }
@@ -154,6 +203,10 @@ class PracticaController extends Controller
         return redirect()->route('practicas.index')
             ->with('success', 'Primer Informe subido correctamente.');
     }
+
+    // ============================================================
+    // 📌 REPORTE FINAL (Segundo Informe - 360h)
+    // ============================================================
 
     // Mostrar formulario para subir reporte final (Segundo Informe - 360h)
     public function mostrarFormularioReporteFinal($id)
@@ -166,9 +219,9 @@ class PracticaController extends Controller
 
         $fechaLimite = $practica->fecha_limite_final;
         $fechaHoy = now()->startOfDay();
-        $fechaFormateada = $fechaLimite ? \Carbon\Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
+        $fechaFormateada = $fechaLimite ? Carbon::parse($fechaLimite)->format('d/m/Y') : 'No definida';
         
-        $fechaInicio = $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio) : null;
+        $fechaInicio = $practica->fecha_inicio ? Carbon::parse($practica->fecha_inicio) : null;
         $horasCompletadas = 0;
         
         if ($fechaInicio && $fechaHoy->greaterThanOrEqualTo($fechaInicio)) {
@@ -186,12 +239,12 @@ class PracticaController extends Controller
         }
 
         if ($diasRestantes !== null && $diasRestantes < 0 && $diasRestantes >= -5) {
-            $fechaFinPrórroga = \Carbon\Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
+            $fechaFinPrórroga = Carbon::parse($fechaLimite)->addDays(5)->format('d/m/Y');
             session()->flash('warning', 'El plazo oficial venció el ' . $fechaFormateada . '. Tienes 5 días adicionales (hasta el ' . $fechaFinPrórroga . ') para subir el informe.');
         }
 
         if ($diasRestantes !== null && $diasRestantes > 5) {
-            $fechaInicioSubida = \Carbon\Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
             session()->flash('info', 'La fecha límite para subir es el ' . $fechaFormateada . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
         }
 
@@ -207,30 +260,75 @@ class PracticaController extends Controller
             abort(403);
         }
 
+        // ✅ VALIDACIONES DE FECHAS (se mantienen igual)
+        $fechaLimite = $practica->fecha_limite_final;
+        $fechaHoy = now()->startOfDay();
+
+        if (!$fechaLimite) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'No hay fecha límite definida para el Segundo Informe.');
+        }
+
+        $diasRestantes = $fechaHoy->diffInDays($fechaLimite, false);
+
+        if ($diasRestantes > 5) {
+            $fechaInicioSubida = Carbon::parse($fechaLimite)->subDays(5)->format('d/m/Y');
+            return redirect()->route('practicas.index')
+                ->with('error', 'Aún no puedes subir el Segundo Informe. La fecha límite es el ' . Carbon::parse($fechaLimite)->format('d/m/Y') . '. Podrás subirlo a partir del ' . $fechaInicioSubida . '.');
+        }
+
+        // ✅ VALIDACIÓN DEL ARCHIVO
         $request->validate([
             'reporte_pdf' => 'required|file|mimes:pdf|max:5120',
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        if ($practica->archivo_final && file_exists(storage_path('app/public/' . $practica->archivo_final))) {
-            unlink(storage_path('app/public/' . $practica->archivo_final));
+        // ✅ BUSCAR TIPO DE DOCUMENTO (igual que subirSolicitud)
+        $tipoDocumento = TipoDocumento::where('nombre', 'Segundo Informe de Actividades')
+            ->where('tramite', 'PP')
+            ->first();
+
+        if (!$tipoDocumento) {
+            return redirect()->route('practicas.index')
+                ->with('error', 'Tipo de documento no encontrado. Contacta al administrador.');
         }
 
+        // ✅ GUARDAR EN DOCUMENTOS (igual que subirSolicitud)
         $path = $request->file('reporte_pdf')->store('reportes_pp_final', 'public');
 
-        $practica->update([
-            'reporte_final_subido' => true,
-            'archivo_final' => $path,
-            'estatus_final' => 'pendiente', // ✅ Se reinicia a pendiente al subir
-        ]);
+        $documento = Documento::where('user_id', Auth::id())
+            ->where('tipo_documento_id', $tipoDocumento->id)
+            ->first();
 
-        if ($request->filled('comentario')) {
-            $comentario = new \App\Models\Comentario([
-                'contenido' => $request->comentario,
-                'tipo' => 'estudiante_segundo_informe',
+        if ($documento) {
+            // ✅ DOCUMENTO EXISTENTE: SOLO actualizar archivo, NO el estatus
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
+        } else {
+            // ✅ DOCUMENTO NUEVO: estatus = 'pendiente'
+            $documento = Documento::create([
                 'user_id' => Auth::id(),
-                'comentable_id' => $practica->id,
-                'comentable_type' => 'App\Models\Practica',
+                'tipo_documento_id' => $tipoDocumento->id,
+                'archivo_pdf' => $path,
+                'estatus' => 'pendiente',
+                'activo' => true,
+            ]);
+        }
+
+        // ✅ COMENTARIOS (igual que subirSolicitud)
+        if ($request->filled('comentario')) {
+            $comentario = new Comentario([
+                'contenido' => $request->comentario,
+                'tipo' => 'estudiante',
+                'user_id' => Auth::id(),
+                'comentable_id' => $documento->id,
+                'comentable_type' => 'App\Models\Documento',
             ]);
             $comentario->save();
         }
@@ -238,6 +336,10 @@ class PracticaController extends Controller
         return redirect()->route('practicas.index')
             ->with('success', 'Segundo Informe subido correctamente.');
     }
+
+    // ============================================================
+    // 📌 DOCUMENTOS ADMINISTRATIVOS (SIN CAMBIOS)
+    // ============================================================
 
     // Mostrar formulario para subir solicitud
     public function mostrarFormularioSolicitud($id)
@@ -258,8 +360,8 @@ class PracticaController extends Controller
         ]);
 
         $tipoDocumento = TipoDocumento::where('nombre', 'Solicitud de Prácticas Profesionales')
-        ->where('tramite', 'PP')
-        ->first();
+            ->where('tramite', 'PP')
+            ->first();
         if (!$tipoDocumento) {
             return redirect()->route('practicas.index')->with('error', 'Tipo de documento no encontrado.');
         }
@@ -271,7 +373,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/solicitudes_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -329,7 +438,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/modalidad_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -387,7 +503,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_presentacion_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -445,7 +568,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/carta_aceptacion_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -503,7 +633,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/evaluacion_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -561,7 +698,14 @@ class PracticaController extends Controller
         $path = $request->file('archivo_pdf')->store('documentos/liberacion_pp', 'public');
 
         if ($documento) {
-            $documento->update(['archivo_pdf' => $path, 'estatus' => 'pendiente', 'updated_at' => now()]);
+            if ($documento->archivo_pdf && file_exists(storage_path('app/public/' . $documento->archivo_pdf))) {
+                unlink(storage_path('app/public/' . $documento->archivo_pdf));
+            }
+            $documento->update([
+                'archivo_pdf' => $path,
+                'updated_at' => now(),
+                // ❌ NO se toca 'estatus'
+            ]);
         } else {
             $documento = Documento::create([
                 'user_id' => Auth::id(),
@@ -586,6 +730,10 @@ class PracticaController extends Controller
         return redirect()->route('practicas.index')
             ->with('success', 'Carta de Liberación subida correctamente.');
     }
+
+    // ============================================================
+    // 📌 ELIMINAR DOCUMENTO (GENERAL - PARA TODOS LOS DOCUMENTOS)
+    // ============================================================
 
     // Eliminar un documento específico
     public function eliminarDocumento($id, $tipoDocumentoNombre)
@@ -612,105 +760,21 @@ class PracticaController extends Controller
             ->with('success', 'Documento eliminado correctamente.');
     }
 
-    // Eliminar un informe (Primer o Segundo)
-    public function eliminarInforme($id, $tipo)
-    {
-        $practica = Practica::findOrFail($id);
-        if ($practica->user_id !== Auth::id()) abort(403);
+    // ============================================================
+    // 📌 ELIMINAR INFORME (YA NO SE USA - SE USA eliminarDocumento)
+    // ============================================================
+    // ❌ ELIMINADO: eliminarInforme()
 
-        if ($tipo == 'primero') {
-            if ($practica->archivo_parcial && file_exists(storage_path('app/public/' . $practica->archivo_parcial))) {
-                unlink(storage_path('app/public/' . $practica->archivo_parcial));
-            }
-            $practica->update([
-                'reporte_parcial_subido' => false,
-                'archivo_parcial' => null,
-                'estatus_parcial' => 'pendiente',
-            ]);
-            $mensaje = 'Primer Informe eliminado correctamente.';
-        } elseif ($tipo == 'segundo') {
-            if ($practica->archivo_final && file_exists(storage_path('app/public/' . $practica->archivo_final))) {
-                unlink(storage_path('app/public/' . $practica->archivo_final));
-            }
-            $practica->update([
-                'reporte_final_subido' => false,
-                'archivo_final' => null,
-                'estatus_final' => 'pendiente',
-            ]);
-            $mensaje = 'Segundo Informe eliminado correctamente.';
-        } else {
-            return redirect()->route('practicas.index')->with('error', 'Tipo de informe no válido.');
-        }
+    // ============================================================
+    // 📌 MÉTODOS DE VALIDACIÓN (YA NO SE USAN)
+    // ============================================================
+    // ❌ ELIMINADOS: validarReporteParcial, validarVentanillaReporteParcial, 
+    //    rechazarReporteParcial, validarReporteFinal, 
+    //    validarVentanillaReporteFinal, rechazarReporteFinal
 
-        return redirect()->route('practicas.index')->with('success', $mensaje);
-    }
-
-    // ✅ Validar informe parcial (Primer Informe) - ACTUALIZADO
-    public function validarReporteParcial($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_parcial' => 'validado',
-        ]);
-
-        return redirect()->back()->with('success', 'Primer Informe validado correctamente.');
-    }
-
-    // ✅ Validar en ventanilla (Primer Informe) - NUEVO
-    public function validarVentanillaReporteParcial($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_parcial' => 'validado_ventanilla',
-        ]);
-
-        return redirect()->back()->with('success', 'Primer Informe validado en ventanilla.');
-    }
-
-    // ✅ Rechazar informe parcial (Primer Informe) - ACTUALIZADO
-    public function rechazarReporteParcial($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_parcial' => 'rechazado',
-        ]);
-
-        return redirect()->back()->with('error', 'Primer Informe rechazado. El estudiante debe corregirlo.');
-    }
-
-    // ✅ Validar informe final (Segundo Informe) - ACTUALIZADO
-    public function validarReporteFinal($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_final' => 'validado',
-        ]);
-
-        return redirect()->back()->with('success', 'Segundo Informe validado correctamente.');
-    }
-
-    // ✅ Validar en ventanilla (Segundo Informe) - NUEVO
-    public function validarVentanillaReporteFinal($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_final' => 'validado_ventanilla',
-        ]);
-
-        return redirect()->back()->with('success', 'Segundo Informe validado en ventanilla.');
-    }
-
-    // ✅ Rechazar informe final (Segundo Informe) - ACTUALIZADO
-    public function rechazarReporteFinal($id)
-    {
-        $practica = Practica::findOrFail($id);
-        $practica->update([
-            'estatus_final' => 'rechazado',
-        ]);
-
-        return redirect()->back()->with('error', 'Segundo Informe rechazado. El estudiante debe corregirlo.');
-    }
-
+    // ============================================================
+    // 📌 DESCARGA DE WORD RELLENO
+    // ============================================================
     public function descargarWordRelleno($id)
     {
         $practica = Practica::with('user', 'empresa', 'gradoAcademico', 'horario', 'gradoAcademicoJefe')->findOrFail($id);

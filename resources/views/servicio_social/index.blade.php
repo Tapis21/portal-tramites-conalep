@@ -129,22 +129,21 @@
                             'Elección de Modalidad' => ['tipo' => 'admin', 'ruta' => 'subir-modalidad', 'campo' => null],
                             'Carta de Presentación de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-carta-presentacion', 'campo' => null],
                             'Carta de Aceptación' => ['tipo' => 'admin', 'ruta' => 'subir-carta-aceptacion', 'campo' => null],
-                            'Primer Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-parcial', 'campo' => 'reporte_parcial_subido'],
-                            'Segundo Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-final', 'campo' => 'reporte_final_subido'],
+                            'Primer Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-parcial', 'campo' => null],
+                            'Segundo Informe de Actividades Trimestral' => ['tipo' => 'informe', 'ruta' => 'subir-reporte-final', 'campo' => null],
                             'Evaluación de Competencias del Desempeño' => ['tipo' => 'admin', 'ruta' => 'subir-evaluacion', 'campo' => null],
                             'Carta de Liberación de Servicio Social' => ['tipo' => 'admin', 'ruta' => 'subir-liberacion', 'campo' => null],
                         ];
                         
-                        $subidos = \App\Models\Documento::where('user_id', Auth::id())
-                            ->whereHas('tipoDocumento', function($q) use ($documentosOrdenados) {
-                                $q->whereIn('nombre', array_keys($documentosOrdenados))
-                                  ->where('tramite', 'SS');
-                            })
+                        // ✅ BUSCAR TODOS LOS DOCUMENTOS EN tabla documentos
+                        $documentos = \App\Models\Documento::where('user_id', Auth::id())
                             ->where('activo', true)
+                            ->whereHas('tipoDocumento', function($q) {
+                                $q->where('tramite', 'SS');
+                            })
                             ->with('tipoDocumento')
                             ->get()
-                            ->pluck('tipoDocumento.nombre')
-                            ->toArray();
+                            ->keyBy('tipoDocumento.nombre');
                     @endphp
                     
                     <div class="overflow-x-auto">
@@ -161,48 +160,15 @@
                                 @foreach($documentosOrdenados as $nombre => $config)
                                     @php
                                         $ruta = $config['ruta'];
-                                        $estaSubido = false;
-                                        $estaValidado = false;
+                                        $doc = $documentos[$nombre] ?? null;
+                                        $estaSubido = $doc && $doc->archivo_pdf !== null;
+                                        $estatusDoc = $doc ? $doc->estatus : 'pendiente';
                                         
-                                        if ($config['tipo'] == 'admin') {
-                                            $docActual = \App\Models\Documento::where('user_id', Auth::id())
-                                                ->whereHas('tipoDocumento', function($q) use ($nombre) {
-                                                    $q->where('nombre', $nombre)
-                                                      ->where('tramite', 'SS');
-                                                })->first();
-                                            
-                                            $estaSubido = $docActual && $docActual->archivo_pdf !== null;
-                                            $estaValidado = $docActual && $docActual->estatus == 'validado';
-                                            $doc = $docActual;
-                                        } else {
-                                            $campo = $config['campo'];
-                                            $estaSubido = $servicioSocial->$campo ?? false;
-                                            
-                                            // ✅ NUEVA LÓGICA CON ESTATUS
-                                            $estatusInforme = $servicioSocial->estatus_parcial ?? 'pendiente';
-                                            if ($nombre == 'Segundo Informe de Actividades Trimestral') {
-                                                $estatusInforme = $servicioSocial->estatus_final ?? 'pendiente';
-                                            }
-                                            $doc = null;
-                                        }
+                                        // ✅ BLOQUEO PARA validado Y validado_ventanilla
+                                        $documentoBloqueado = $doc && in_array($doc->estatus, ['validado', 'validado_ventanilla']);
                                         
-                                        // Obtener comentarios para mostrar en el tooltip
-                                        $comentariosTooltip = collect();
-                                        if ($config['tipo'] == 'admin' && $doc) {
-                                            $comentariosTooltip = $doc->comentarios()->orderBy('created_at', 'desc')->get();
-                                        } elseif ($config['tipo'] == 'informe') {
-                                            if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                $tiposComentarios = ['estudiante_primer_informe', 'admin_primer_informe'];
-                                            } else {
-                                                $tiposComentarios = ['estudiante_segundo_informe', 'admin_segundo_informe'];
-                                            }
-                                            $comentariosTooltip = \App\Models\Comentario::where('comentable_type', 'App\Models\ServicioSocial')
-                                                ->where('comentable_id', $servicioSocial->id)
-                                                ->whereIn('tipo', $tiposComentarios)
-                                                ->orderBy('created_at', 'desc')
-                                                ->get();
-                                        }
-                                        
+                                        // Comentarios
+                                        $comentariosTooltip = $doc ? $doc->comentarios()->orderBy('created_at', 'desc')->get() : collect();
                                         $tieneComentarios = $comentariosTooltip->count() > 0;
                                         $comentariosNoLeidos = 0;
                                         foreach($comentariosTooltip as $c) {
@@ -211,16 +177,7 @@
                                             }
                                         }
                                         
-                                        $tiposParaMarcar = [];
-                                        if ($config['tipo'] == 'admin' && $doc) {
-                                            $tiposParaMarcar = ['admin'];
-                                        } elseif ($config['tipo'] == 'informe') {
-                                            if ($nombre == 'Primer Informe de Actividades Trimestral') {
-                                                $tiposParaMarcar = ['admin_primer_informe'];
-                                            } else {
-                                                $tiposParaMarcar = ['admin_segundo_informe'];
-                                            }
-                                        }
+                                        $tiposParaMarcar = $doc ? ['admin'] : [];
                                     @endphp
                                     
                                     <div class="bg-white rounded-lg border border-gray-200/80 hover:border-green-200 transition">
@@ -233,77 +190,33 @@
                                             
                                             <!-- Estado -->
                                             <div class="flex items-center md:col-span-3">
-                                                @if($config['tipo'] == 'informe')
-                                                    {{-- ✅ INFORMES: ACTUALIZADOS CON ESTATUS --}}
-                                                    @php
-                                                        $estatusInforme = $servicioSocial->estatus_parcial ?? 'pendiente';
-                                                        if ($nombre == 'Segundo Informe de Actividades Trimestral') {
-                                                            $estatusInforme = $servicioSocial->estatus_final ?? 'pendiente';
-                                                        }
-                                                    @endphp
-                                                    
-                                                    @if($estatusInforme == 'rechazado')
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
-                                                            Rechazado
-                                                        </span>
-                                                    @elseif($estatusInforme == 'validado_ventanilla')
+                                                @if($doc && $estaSubido)
+                                                    @if($estatusDoc == 'validado_ventanilla')
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                                                             <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
                                                             Validado en Ventanilla
                                                         </span>
-                                                    @elseif($estatusInforme == 'validado')
+                                                    @elseif($estatusDoc == 'validado')
                                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                                                             <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
                                                             Entregar en Ventanilla
                                                         </span>
-                                                    @elseif($estaSubido)
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
-                                                            Pendiente validación
+                                                    @elseif($estatusDoc == 'rechazado')
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
+                                                            Rechazado
                                                         </span>
                                                     @else
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
-                                                            No subido
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
+                                                            Pendiente
                                                         </span>
                                                     @endif
                                                 @else
-                                                    {{-- ✅ DOCUMENTOS ADMINISTRATIVOS: ACTUALIZADOS --}}
-                                                    @if($estaSubido)
-                                                        @php
-                                                            $estatusDoc = $doc->estatus ?? 'pendiente';
-                                                        @endphp
-                                                        
-                                                        @if($estatusDoc == 'validado_ventanilla')
-                                                            {{-- Validado en Ventanilla → VERDE --}}
-                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
-                                                                Validado en Ventanilla
-                                                            </span>
-                                                        @elseif($estatusDoc == 'validado')
-                                                            {{-- Entregar en Ventanilla → AZUL --}}
-                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-decagram"></span>
-                                                                Entregar en Ventanilla
-                                                            </span>
-                                                        @elseif($estatusDoc == 'rechazado')
-                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
-                                                                Rechazado
-                                                            </span>
-                                                        @else
-                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:clock-outline"></span>
-                                                                Pendiente
-                                                            </span>
-                                                        @endif
-                                                    @else
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
-                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
-                                                            No subido
-                                                        </span>
-                                                    @endif
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                                                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:close-circle"></span>
+                                                        No subido
+                                                    </span>
                                                 @endif
                                             </div>
                                             
@@ -322,39 +235,25 @@
                                             
                                             <!-- COLUMNA ACCIONES + COMENTARIOS -->
                                             <div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 md:col-span-1 w-full md:w-auto">
-                                                @if($estaSubido)
-                                                    @if(!$estaValidado)
-                                                        {{-- Mostrar botones SOLO si NO está validado --}}
+                                                @if($doc && $doc->archivo_pdf)
+                                                    @if($documentoBloqueado)
+                                                        {{-- 🔒 Candado - Documento bloqueado --}}
+                                                        <span class="inline-flex items-center gap-0.5 px-2 py-1 bg-gray-200 text-gray-500 text-[10px] sm:text-xs font-medium rounded-md cursor-not-allowed whitespace-nowrap">
+                                                            <span class="iconify w-3 h-3 sm:w-3.5 sm:h-3.5" data-icon="mdi:lock"></span>
+                                                            <span class="hidden xs:inline">Bloqueado</span>
+                                                        </span>
+                                                    @else
                                                         <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
                                                             <span class="iconify w-3.5 h-3.5" data-icon="mdi:refresh"></span>
                                                             <span class="hidden sm:inline">Cambiar</span>
                                                         </a>
-                                                        
-                                                        @if(in_array($nombre, ['Primer Informe de Actividades Trimestral', 'Segundo Informe de Actividades Trimestral']))
-                                                            @php
-                                                                $tipoInforme = ($nombre == 'Primer Informe de Actividades Trimestral') ? 'primero' : 'segundo';
-                                                            @endphp
-                                                            <button type="button" 
-                                                                    onclick="mostrarModalEliminar('{{ route('servicio-social.eliminar-informe', [$servicioSocial->id, $tipoInforme]) }}', 'informe')"
-                                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
-                                                                <span class="hidden sm:inline">Eliminar</span>
-                                                            </button>
-                                                        @else
-                                                            <button type="button" 
-                                                                    onclick="mostrarModalEliminar('{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}', 'documento')"
-                                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
-                                                                <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
-                                                                <span class="hidden sm:inline">Eliminar</span>
-                                                            </button>
-                                                        @endif
-                                                    @else
-                                                        {{-- Bloqueado --}}
-                                                        <span class="inline-flex items-center gap-0.5 px-2 py-1 bg-gray-200 text-gray-500 text-[10px] sm:text-xs font-medium rounded-md cursor-not-allowed whitespace-nowrap">
-                                                            <span class="iconify w-3 h-3 sm:w-3.5 sm:h-3.5" data-icon="mdi:lock"></span>
-                                                            <span class="hidden xs:inline">Bloqueado</span>
-                                                        </span>
+                                                        <button type="button" 
+                                                                onclick="mostrarModalEliminar('{{ route('servicio-social.eliminar-documento', [$servicioSocial->id, $nombre]) }}', 'documento')"
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-md transition whitespace-nowrap">
+                                                            <span class="iconify w-3.5 h-3.5" data-icon="mdi:delete"></span>
+                                                            <span class="hidden sm:inline">Eliminar</span>
+                                                        </button>
                                                     @endif
                                                 @else
                                                     <a href="{{ route('servicio-social.' . $ruta, $servicioSocial->id) }}" 
@@ -369,8 +268,8 @@
                                                 <!-- ========================================== -->
                                                 @if($tieneComentarios)
                                                     <div class="relative inline-block group" 
-                                                         data-comentable-type="{{ $config['tipo'] == 'admin' ? 'App\\Models\\Documento' : 'App\\Models\\ServicioSocial' }}"
-                                                         data-comentable-id="{{ $config['tipo'] == 'admin' ? ($doc->id ?? 0) : $servicioSocial->id }}"
+                                                         data-comentable-type="App\\Models\\Documento"
+                                                         data-comentable-id="{{ $doc->id ?? 0 }}"
                                                          data-tipos="{{ json_encode($tiposParaMarcar) }}">
                                                         <button type="button" 
                                                                 class="comentario-btn inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 transition relative"
