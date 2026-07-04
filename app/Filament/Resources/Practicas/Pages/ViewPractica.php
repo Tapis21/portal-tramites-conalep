@@ -185,15 +185,59 @@ class ViewPractica extends ViewRecord implements HasTable
                                     'estatus_practicas' => $data['nuevo_estatus_estudiante']
                                 ]);
 
+                                // ✅ CORREGIDO: El comentario ahora se asocia a un Documento
                                 if (!empty($data['comentario_estatus_estudiante'])) {
-                                    Comentario::create([
-                                        'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
-                                        'tipo' => 'admin',
-                                        'comentable_type' => 'App\\Models\\Practica',
-                                        'comentable_id' => $practica->id,
-                                        'user_id' => Auth::id(),
-                                        'leido' => false
-                                    ]);
+                                    // Buscar un documento del estudiante para asociar el comentario
+                                    $documento = Documento::where('user_id', $this->record->user_id)
+                                        ->where('activo', true)
+                                        ->whereHas('tipoDocumento', function($q) {
+                                            $q->where('tramite', 'PP');
+                                        })
+                                        ->first();
+
+                                    // Si no hay documentos, buscamos cualquier documento del estudiante
+                                    if (!$documento) {
+                                        $documento = Documento::where('user_id', $this->record->user_id)
+                                            ->whereHas('tipoDocumento', function($q) {
+                                                $q->where('tramite', 'PP');
+                                            })
+                                            ->first();
+                                    }
+
+                                    // Si aún no hay documentos, creamos un registro temporal
+                                    if (!$documento) {
+                                        $tipoDocumento = \App\Models\TipoDocumento::where('nombre', 'Solicitud de Prácticas Profesionales')
+                                            ->where('tramite', 'PP')
+                                            ->first();
+                                        
+                                        if ($tipoDocumento) {
+                                            $documento = Documento::create([
+                                                'user_id' => $this->record->user_id,
+                                                'tipo_documento_id' => $tipoDocumento->id,
+                                                'archivo_pdf' => null,
+                                                'estatus' => 'pendiente',
+                                                'activo' => true,
+                                            ]);
+                                        }
+                                    }
+
+                                    // Si logramos obtener o crear un documento, guardamos el comentario
+                                    if ($documento) {
+                                        Comentario::create([
+                                            'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
+                                            'tipo' => 'admin',
+                                            'comentable_type' => 'App\\Models\\Documento', // ✅ CORREGIDO
+                                            'comentable_id' => $documento->id, // ✅ CORREGIDO
+                                            'user_id' => Auth::id(),
+                                            'leido' => false
+                                        ]);
+                                    } else {
+                                        Notification::make()
+                                            ->title('Advertencia')
+                                            ->body('No se pudo asociar el comentario a un documento específico, pero el estatus se actualizó correctamente.')
+                                            ->warning()
+                                            ->send();
+                                    }
                                 }
 
                                 Notification::make()

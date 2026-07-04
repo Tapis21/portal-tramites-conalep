@@ -269,11 +269,10 @@
                                                 @if($tieneComentarios)
                                                     <div class="relative inline-block group" 
                                                          data-comentable-type="App\\Models\\Documento"
-                                                         data-comentable-id="{{ $doc->id ?? 0 }}"
-                                                         data-tipos="{{ json_encode($tiposParaMarcar) }}">
+                                                         data-comentable-id="{{ $doc->id ?? 0 }}">
                                                         <button type="button" 
                                                                 class="comentario-btn inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 transition relative"
-                                                                onclick="marcarComentariosComoLeidos(this)">
+                                                                onclick="marcarComentariosComoLeidos(this, 'App\\Models\\Documento', {{ $doc->id ?? 0 }}, ['admin'])">
                                                             <span class="iconify w-5 h-5 text-gray-600 group-hover:text-green-600 transition" 
                                                                   data-icon="mdi:comment-text-outline"></span>
                                                             
@@ -473,15 +472,11 @@
 <!-- JAVASCRIPT PARA MARCAR COMENTARIOS COMO LEÍDOS -->
 <!-- ========================================== -->
 <script>
-function marcarComentariosComoLeidos(button) {
-    const container = button.closest('.group');
-    if (!container) return;
-    
-    const comentableType = container.dataset.comentableType;
-    const comentableId = container.dataset.comentableId;
-    const tipos = JSON.parse(container.dataset.tipos || '[]');
-    
-    if (!tipos.length || !comentableId) return;
+function marcarComentariosComoLeidos(button, comentableType, comentableId, tipos) {
+    if (!comentableId || !tipos || !tipos.length) {
+        console.warn('Faltan datos para marcar comentarios');
+        return;
+    }
     
     const data = {
         comentable_type: comentableType,
@@ -489,6 +484,8 @@ function marcarComentariosComoLeidos(button) {
         tipos: tipos,
         _token: '{{ csrf_token() }}'
     };
+    
+    console.log('📨 Enviando datos:', data);
     
     fetch('{{ route("comentarios.marcar-leidos") }}', {
         method: 'POST',
@@ -500,15 +497,16 @@ function marcarComentariosComoLeidos(button) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('✅ Respuesta del servidor:', data);
         if (data.success) {
-            const badge = container.querySelector('.badge-notificacion');
+            const badge = button.closest('.group').querySelector('.badge-notificacion');
             if (badge) {
                 badge.style.display = 'none';
             }
         }
     })
     .catch(error => {
-        console.error('Error al marcar comentarios como leídos:', error);
+        console.error('❌ Error:', error);
     });
 }
 
@@ -519,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (button) {
                 const badge = container.querySelector('.badge-notificacion');
                 if (badge && badge.style.display !== 'none') {
-                    marcarComentariosComoLeidos(button);
+                    // No hacemos nada porque el onclick ya maneja todo
                 }
             }
         });

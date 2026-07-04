@@ -187,15 +187,62 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                     'estatus_servicio_social' => $data['nuevo_estatus_estudiante']
                                 ]);
 
+                                // ✅ CORREGIDO: El comentario ahora se asocia a un Documento
                                 if (!empty($data['comentario_estatus_estudiante'])) {
-                                    Comentario::create([
-                                        'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
-                                        'tipo' => 'admin',
-                                        'comentable_type' => 'App\\Models\\ServicioSocial',
-                                        'comentable_id' => $servicioSocial->id,
-                                        'user_id' => Auth::id(),
-                                        'leido' => false
-                                    ]);
+                                    // Buscar un documento del estudiante para asociar el comentario
+                                    $documento = Documento::where('user_id', $this->record->user_id)
+                                        ->where('activo', true)
+                                        ->whereHas('tipoDocumento', function($q) {
+                                            $q->where('tramite', 'SS');
+                                        })
+                                        ->first();
+
+                                    // Si no hay documentos, creamos uno temporal o usamos el primer documento disponible
+                                    if (!$documento) {
+                                        // Buscar cualquier documento del estudiante (incluyendo inactivos)
+                                        $documento = Documento::where('user_id', $this->record->user_id)
+                                            ->whereHas('tipoDocumento', function($q) {
+                                                $q->where('tramite', 'SS');
+                                            })
+                                            ->first();
+                                    }
+
+                                    // Si aún no hay documentos, creamos un registro temporal
+                                    if (!$documento) {
+                                        // Buscar el tipo de documento "Solicitud de Servicio Social" para crear uno temporal
+                                        $tipoDocumento = \App\Models\TipoDocumento::where('nombre', 'Solicitud de Servicio Social')
+                                            ->where('tramite', 'SS')
+                                            ->first();
+                                        
+                                        if ($tipoDocumento) {
+                                            $documento = Documento::create([
+                                                'user_id' => $this->record->user_id,
+                                                'tipo_documento_id' => $tipoDocumento->id,
+                                                'archivo_pdf' => null,
+                                                'estatus' => 'pendiente',
+                                                'activo' => true,
+                                            ]);
+                                        }
+                                    }
+
+                                    // Si logramos obtener o crear un documento, guardamos el comentario
+                                    if ($documento) {
+                                        Comentario::create([
+                                            'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
+                                            'tipo' => 'admin',
+                                            'comentable_type' => 'App\\Models\\Documento', // ✅ CORREGIDO
+                                            'comentable_id' => $documento->id, // ✅ CORREGIDO
+                                            'user_id' => Auth::id(),
+                                            'leido' => false
+                                        ]);
+                                    } else {
+                                        // Si no se pudo crear un documento, enviamos notificación de advertencia
+                                        Notification::make()
+                                            ->title('Advertencia')
+                                            ->body('No se pudo asociar el comentario a un documento específico, pero el estatus se actualizó correctamente.')
+                                            ->warning()
+                                            ->send();
+                                    }
                                 }
 
                                 Notification::make()
