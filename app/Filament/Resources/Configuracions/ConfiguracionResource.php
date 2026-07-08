@@ -11,17 +11,16 @@ class ConfiguracionResource extends Resource
 {
     protected static ?string $model = \App\Models\User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCloudArrowUp;
 
-    protected static ?string $navigationLabel = 'Configuración';
+    protected static ?string $navigationLabel = 'Importación Masiva';
 
-    protected static ?string $pluralModelLabel = 'Configuración';
+    protected static ?string $pluralModelLabel = 'Importación Masiva';
 
-    protected static ?int $navigationSort = 5;
-
-    public static function getRelations(): array
+    // ✅ GRUPO CORRECTO
+    public static function getNavigationGroup(): ?string
     {
-        return [];
+        return 'Configuración';
     }
 
     public static function getPages(): array

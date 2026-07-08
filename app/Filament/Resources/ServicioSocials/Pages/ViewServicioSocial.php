@@ -6,6 +6,7 @@ use App\Filament\Resources\ServicioSocials\ServicioSocialResource;
 use App\Models\Documento;
 use App\Models\Comentario;
 use App\Models\ServicioSocial;
+use App\Models\User; // ✅ AGREGADO
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -36,6 +37,14 @@ class ViewServicioSocial extends ViewRecord implements HasTable
     public $nuevo_estatus_estudiante = '';
     public $comentario_estatus_estudiante = '';
 
+    /**
+     * ✅ Obtener el ServicioSocial del usuario actual
+     */
+    protected function getServicioSocial()
+    {
+        return $this->record->servicioSocial;
+    }
+
     public function infolist(Schema $schema): Schema
     {
         return $schema
@@ -43,96 +52,130 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                 Section::make('Datos del Estudiante')
                     ->icon('heroicon-o-user-group')
                     ->schema([
-                        TextEntry::make('user.name')
+                        // ✅ CAMBIADO: usar $this->record directamente (es User)
+                        TextEntry::make('name')
                             ->label('Nombre completo')
+                            ->formatStateUsing(fn () => $this->record->name . ' ' . $this->record->apellidos)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('user.matricula')
+                        TextEntry::make('matricula')
                             ->label('Matrícula')
                             ->icon('heroicon-o-identification'),
-                        TextEntry::make('user.carrera')
+                        TextEntry::make('carrera')
                             ->label('Carrera')
                             ->icon('heroicon-o-academic-cap'),
-                        TextEntry::make('user.semestre')
+                        TextEntry::make('semestre')
                             ->label('Semestre')
                             ->formatStateUsing(fn ($state) => $state . '° Semestre')
                             ->icon('heroicon-o-numbered-list'),
-                        TextEntry::make('user.grupo')
+                        TextEntry::make('grupo')
                             ->label('Grupo')
                             ->placeholder('No asignado')
                             ->icon('heroicon-o-users'),
-                        TextEntry::make('user.nombre_turno')
+                        TextEntry::make('turno.nombre')
                             ->label('Turno')
+                            ->default(fn () => $this->record->turno?->nombre ?? 'No definido')
                             ->icon('heroicon-o-clock'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: DATOS DE LA EMPRESA (solo si tiene SS)
                 Section::make('Datos de la Empresa')
                     ->icon('heroicon-o-building-office-2')
+                    ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
-                        TextEntry::make('empresa.nombre')
+                        TextEntry::make('servicioSocial.empresa.nombre')
                             ->label('Empresa')
+                            ->default(fn () => $this->getServicioSocial()?->empresa?->nombre ?? 'No especificada')
                             ->icon('heroicon-o-building-office'),
-                        TextEntry::make('area_asignada')
+                        TextEntry::make('servicioSocial.area_asignada')
                             ->label('Área asignada')
-                            ->placeholder('No especificada')
+                            ->default(fn () => $this->getServicioSocial()?->area_asignada ?? 'No especificada')
                             ->icon('heroicon-o-map-pin'),
                     ])
                     ->columns(2),
 
+                // ✅ SECCIÓN: SIN SOLICITUD (solo si NO tiene SS)
+                Section::make('Sin Solicitud de Servicio Social')
+                    ->icon('heroicon-o-information-circle')
+                    ->visible(fn () => $this->getServicioSocial() === null)
+                    ->schema([
+                        TextEntry::make('sin_solicitud')
+                            ->label('')
+                            ->default('Este alumno aún no ha solicitado Servicio Social.')
+                            ->icon('heroicon-o-exclamation-circle'),
+                    ]),
+
+                // ✅ SECCIÓN: FECHAS Y HORAS (solo si tiene SS)
                 Section::make('Fechas y Horas')
                     ->icon('heroicon-o-calendar-days')
+                    ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
-                        TextEntry::make('fecha_inicio')
+                        TextEntry::make('servicioSocial.fecha_inicio')
                             ->label('Fecha de inicio')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getServicioSocial()?->fecha_inicio)
                             ->icon('heroicon-o-calendar'),
-                        TextEntry::make('fecha_limite_segundo_informe')
+                        TextEntry::make('servicioSocial.fecha_limite_segundo_informe')
                             ->label('Fecha de finalización')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getServicioSocial()?->fecha_limite_segundo_informe)
                             ->icon('heroicon-o-calendar-days'),
-                        TextEntry::make('horario.hora_inicio')
+                        TextEntry::make('servicioSocial.horario.hora_inicio')
                             ->label('Horario')
-                            ->formatStateUsing(fn ($record) => 
-                                $record->horario ? $record->horario->hora_inicio . ' - ' . $record->horario->hora_fin : 'No definido'
-                            )
+                            ->formatStateUsing(function () {
+                                $horario = $this->getServicioSocial()?->horario;
+                                return $horario ? $horario->hora_inicio . ' - ' . $horario->hora_fin : 'No definido';
+                            })
                             ->icon('heroicon-o-clock'),
-                        TextEntry::make('fecha_limite_primer_informe')
+                        TextEntry::make('servicioSocial.fecha_limite_primer_informe')
                             ->label('Límite primer informe')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getServicioSocial()?->fecha_limite_primer_informe)
                             ->icon('heroicon-o-calendar'),
-                        TextEntry::make('fecha_limite_segundo_informe')
+                        TextEntry::make('servicioSocial.fecha_limite_segundo_informe')
                             ->label('Límite segundo informe')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getServicioSocial()?->fecha_limite_segundo_informe)
                             ->icon('heroicon-o-calendar'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: DATOS DE CONTACTO (solo si tiene SS)
                 Section::make('Datos de Contacto')
                     ->icon('heroicon-o-phone')
+                    ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
-                        TextEntry::make('gradoAcademico.abreviatura')
+                        TextEntry::make('servicioSocial.gradoAcademico.abreviatura')
                             ->label('Grado (Carta)')
+                            ->default(fn () => $this->getServicioSocial()?->gradoAcademico?->abreviatura ?? 'No definido')
                             ->icon('heroicon-o-user-circle'),
-                        TextEntry::make('nombre_persona_carta')
+                        TextEntry::make('servicioSocial.nombre_persona_carta')
                             ->label('Nombre de la persona')
+                            ->default(fn () => $this->getServicioSocial()?->nombre_persona_carta)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('cargo_persona_carta')
+                        TextEntry::make('servicioSocial.cargo_persona_carta')
                             ->label('Cargo de la persona')
+                            ->default(fn () => $this->getServicioSocial()?->cargo_persona_carta)
                             ->icon('heroicon-o-briefcase'),
-                        TextEntry::make('gradoAcademicoJefe.abreviatura')
+                        TextEntry::make('servicioSocial.gradoAcademicoJefe.abreviatura')
                             ->label('Grado (Jefe)')
+                            ->default(fn () => $this->getServicioSocial()?->gradoAcademicoJefe?->abreviatura ?? 'No definido')
                             ->icon('heroicon-o-user-circle'),
-                        TextEntry::make('nombre_jefe_inmediato')
+                        TextEntry::make('servicioSocial.nombre_jefe_inmediato')
                             ->label('Nombre del jefe inmediato')
+                            ->default(fn () => $this->getServicioSocial()?->nombre_jefe_inmediato)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('cargo_jefe_inmediato')
+                        TextEntry::make('servicioSocial.cargo_jefe_inmediato')
                             ->label('Cargo del jefe inmediato')
+                            ->default(fn () => $this->getServicioSocial()?->cargo_jefe_inmediato)
                             ->icon('heroicon-o-briefcase'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: INFORMACIÓN ADICIONAL (solo si tiene SS)
                 Section::make('Información Adicional')
                     ->icon('heroicon-o-information-circle')
+                    ->visible(fn () => $this->getServicioSocial() !== null)
                     ->footerActions([
                         Actions\Action::make('cambiar_estatus_estudiante')
                             ->label('Cambiar Estatus')
@@ -148,7 +191,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                         'en_progreso' => 'En progreso',
                                         'liberado' => 'Liberado',
                                     ])
-                                    ->default(fn ($record) => $record->estatus ?? 'no_solicitado')
+                                    ->default(fn ($record) => $this->getServicioSocial()?->estatus ?? 'no_solicitado')
                                     ->required(),
                                 Textarea::make('comentario_estatus_estudiante')
                                     ->label('Comentario (opcional)')
@@ -157,7 +200,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                     ->maxLength(500),
                             ])
                             ->action(function (array $data) {
-                                $servicioSocial = ServicioSocial::where('user_id', $this->record->user_id)->first();
+                                $servicioSocial = $this->getServicioSocial();
                                 
                                 if (!$servicioSocial) {
                                     Notification::make()
@@ -187,36 +230,30 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                     'estatus_servicio_social' => $data['nuevo_estatus_estudiante']
                                 ]);
 
-                                // ✅ CORREGIDO: El comentario ahora se asocia a un Documento
                                 if (!empty($data['comentario_estatus_estudiante'])) {
-                                    // Buscar un documento del estudiante para asociar el comentario
-                                    $documento = Documento::where('user_id', $this->record->user_id)
+                                    $documento = Documento::where('user_id', $this->record->id)
                                         ->where('activo', true)
                                         ->whereHas('tipoDocumento', function($q) {
                                             $q->where('tramite', 'SS');
                                         })
                                         ->first();
 
-                                    // Si no hay documentos, creamos uno temporal o usamos el primer documento disponible
                                     if (!$documento) {
-                                        // Buscar cualquier documento del estudiante (incluyendo inactivos)
-                                        $documento = Documento::where('user_id', $this->record->user_id)
+                                        $documento = Documento::where('user_id', $this->record->id)
                                             ->whereHas('tipoDocumento', function($q) {
                                                 $q->where('tramite', 'SS');
                                             })
                                             ->first();
                                     }
 
-                                    // Si aún no hay documentos, creamos un registro temporal
                                     if (!$documento) {
-                                        // Buscar el tipo de documento "Solicitud de Servicio Social" para crear uno temporal
                                         $tipoDocumento = \App\Models\TipoDocumento::where('nombre', 'Solicitud de Servicio Social')
                                             ->where('tramite', 'SS')
                                             ->first();
                                         
                                         if ($tipoDocumento) {
                                             $documento = Documento::create([
-                                                'user_id' => $this->record->user_id,
+                                                'user_id' => $this->record->id,
                                                 'tipo_documento_id' => $tipoDocumento->id,
                                                 'archivo_pdf' => null,
                                                 'estatus' => 'pendiente',
@@ -225,18 +262,16 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                                         }
                                     }
 
-                                    // Si logramos obtener o crear un documento, guardamos el comentario
                                     if ($documento) {
                                         Comentario::create([
                                             'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
                                             'tipo' => 'admin',
-                                            'comentable_type' => 'App\\Models\\Documento', // ✅ CORREGIDO
-                                            'comentable_id' => $documento->id, // ✅ CORREGIDO
+                                            'comentable_type' => 'App\\Models\\Documento',
+                                            'comentable_id' => $documento->id,
                                             'user_id' => Auth::id(),
                                             'leido' => false
                                         ]);
                                     } else {
-                                        // Si no se pudo crear un documento, enviamos notificación de advertencia
                                         Notification::make()
                                             ->title('Advertencia')
                                             ->body('No se pudo asociar el comentario a un documento específico, pero el estatus se actualizó correctamente.')
@@ -258,13 +293,14 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                             ->modalWidth('md'),
                     ])
                     ->schema([
-                        TextEntry::make('apoyo_estudiante')
+                        TextEntry::make('servicioSocial.apoyo_estudiante')
                             ->label('Apoyo al estudiante')
-                            ->placeholder('No especificado')
+                            ->default(fn () => $this->getServicioSocial()?->apoyo_estudiante ?? 'No especificado')
                             ->icon('heroicon-o-hand-raised'),
-                        TextEntry::make('estatus')
+                        TextEntry::make('servicioSocial.estatus')
                             ->label('Estatus del Servicio Social')
                             ->badge()
+                            ->default(fn () => $this->getServicioSocial()?->estatus ?? 'no_solicitado')
                             ->color(fn (string $state): string => match ($state) {
                                 'liberado' => 'success',
                                 'en_progreso' => 'info',
@@ -390,7 +426,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
         return $table
             ->query(
                 Documento::query()
-                    ->where('user_id', $this->record->user_id)
+                    ->where('user_id', $this->record->id) // ✅ CAMBIADO: user_id → id
                     ->where('activo', true)
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
                     ->with(['tipoDocumento', 'comentarios.user'])

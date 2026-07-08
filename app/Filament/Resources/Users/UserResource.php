@@ -18,7 +18,7 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -26,7 +26,11 @@ class UserResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Usuarios';
 
-    protected static ?int $navigationSort = 4;
+    // ✅ GRUPO CORRECTO
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Configuración';
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -40,9 +44,7 @@ class UserResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array

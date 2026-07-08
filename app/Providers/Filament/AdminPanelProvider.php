@@ -17,6 +17,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Navigation\NavigationItem;
+use Filament\Navigation\NavigationGroup;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->authGuard('web')
             ->colors([
-                'primary' => Color::hex('#006937'), // Verde CONALEP
+                'primary' => Color::hex('#006937'),
                 'gray' => Color::Slate,
             ])
             ->brandName('CONALEP II')
@@ -43,7 +45,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                // Tus widgets personalizados
                 \App\Filament\Widgets\EstadisticasGenerales::class,
                 \App\Filament\Widgets\SolicitudesPendientesSS::class,
                 \App\Filament\Widgets\SolicitudesPendientesPP::class,
@@ -64,6 +65,36 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+            ])
+            // ================================================================
+            // 📋 NAVIGATION GROUPS (SECCIONES DEL MENÚ)
+            // ================================================================
+            ->navigationGroups([
+                NavigationGroup::make()
+                    ->label('📋 General')
+                    ->collapsible(true)
+                    ->collapsed(false),
+
+                NavigationGroup::make()
+                    ->label('📁 Gestión de Trámites')
+                    ->collapsible(true)
+                    ->collapsed(false),
+
+                NavigationGroup::make()
+                    ->label('⚙️ Configuración')
+                    ->collapsible(true)
+                    ->collapsed(false),
+            ])
+            // ================================================================
+            // 🚀 SOLO EL DASHBOARD
+            // ================================================================
+            ->navigationItems([
+                NavigationItem::make('dashboard')
+                    ->label('Escritorio')
+                    ->icon('heroicon-o-home')
+                    ->url('/admin/dashboard')
+                    ->isActiveWhen(fn () => request()->routeIs('filament.admin.pages.dashboard'))
+                    ->group('📋 General'),
             ]);
     }
 }
