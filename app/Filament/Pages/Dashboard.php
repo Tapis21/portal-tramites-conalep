@@ -10,7 +10,7 @@ class Dashboard extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHome;
     
-    protected static ?string $navigationLabel = 'Escritorio';
+    protected static ?string $navigationLabel = 'Inicio';
     
     protected static ?int $navigationSort = 1;
 

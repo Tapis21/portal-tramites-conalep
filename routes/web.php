@@ -11,6 +11,7 @@ use App\Http\Controllers\PracticaController;
 use App\Http\Controllers\SolicitudPracticaController;
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\ImportController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -118,6 +119,73 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/documentos/update-status', [DocumentoStatusController::class, 'update'])
         ->name('filament.admin.resources.servicio-socials.update-document-status')
         ->middleware(['auth']);
+
+    // ==================== RUTAS PARA PLANTILLAS (ADMIN) ====================
+    Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+        Route::get('/plantilla-alumnos', function () {
+            $headers = ['Matrícula', 'Nombre', 'Primer apellido', 'Segundo apellido', 'Grupo Referente', 'Periodo'];
+            $callback = function() use ($headers) {
+                $file = fopen('php://output', 'w');
+                
+                // Encabezados
+                fputcsv($file, $headers);
+                
+                // Línea de instrucción (con # para que sea comentario)
+                fputcsv($file, ['# 📌 No modifiques los nombres de las columnas UNA VEZ LEIDO CADA AVISO ELIMINAR TODO EXCEPTO LAS COLUMNAS', '', '', '', '', '']);
+
+                fputcsv($file, ['', '', '', '', '', '']); // Línea vacía
+
+                fputcsv($file, ['# ⚠️ DATOS DE EJEMPLO - BORRAR Y REEMPLAZAR', '', '', '', '', '']);
+                fputcsv($file, ['# 📌 Reemplaza estos datos con los tuyos', '', '', '', '', '']);
+
+                // Datos de ejemplo
+                fputcsv($file, ['230090047-5', 'DARSY ALINA', 'ROMAN', 'HUCHIN', '601-ADMO23', '2023-2026']);
+                fputcsv($file, ['232860005-7', 'ALDO YAEL', 'PECH', 'ILLESCAS', '601-ADMO23', '2023-2026']);
+                
+                fputcsv($file, ['', '', '', '', '', '']); // Línea vacía
+                
+                // Separador
+                fputcsv($file, ['# --- TUS DATOS EMPIEZAN AQUÍ ---', '', '', '', '', '']);
+                
+                fclose($file);
+            };
+            return response()->stream($callback, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="plantilla_alumnos.csv"',
+            ]);
+        })->name('admin.plantilla.alumnos');
+
+        Route::get('/plantilla-empresas', function () {
+            $headers = ['Nombre', 'Dirección', 'Teléfono', 'Contacto', 'Servicio Social', 'Prácticas', 'Dual', 'Fecha_Termino_Convenio'];
+            $callback = function() use ($headers) {
+                $file = fopen('php://output', 'w');
+                
+                // Encabezados
+                fputcsv($file, $headers);
+
+                // Línea de instrucción (con # para que sea comentario)
+                fputcsv($file, ['# 📌 No modifiques los nombres de las columnas UNA VEZ LEIDO CADA AVISO ELIMINAR TODO EXCEPTO LAS COLUMNAS', '', '', '', '', '']);
+                
+                // Línea de instrucción
+                fputcsv($file, ['# ⚠️ DATOS DE EJEMPLO - BORRAR Y REEMPLAZAR', '', '', '', '', '', '', '']);
+                fputcsv($file, ['# 📌 Reemplaza estos datos con los tuyos', '', '', '', '', '', '', '']);
+                fputcsv($file, ['', '', '', '', '', '', '', '']); // Línea vacía
+                
+                // Datos de ejemplo
+                fputcsv($file, ['CONALEP Cancún II', 'Av. Ejemplo #123', '998-123-4567', 'contacto@conalep.edu.mx', 'SI', 'SI', 'NO', '2025-12-31']);
+                
+                // Separador
+                fputcsv($file, ['', '', '', '', '', '', '', '']);
+                fputcsv($file, ['# --- TUS DATOS EMPIEZAN AQUÍ ---', '', '', '', '', '', '', '']);
+                
+                fclose($file);
+            };
+            return response()->stream($callback, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="plantilla_empresas.csv"',
+            ]);
+        })->name('admin.plantilla.empresas');
+    });
 });
 
 require __DIR__.'/auth.php';
