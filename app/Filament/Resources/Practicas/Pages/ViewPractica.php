@@ -6,6 +6,7 @@ use App\Filament\Resources\Practicas\PracticaResource;
 use App\Models\Documento;
 use App\Models\Comentario;
 use App\Models\Practica;
+use App\Models\User; // ✅ AGREGADO
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -36,6 +37,14 @@ class ViewPractica extends ViewRecord implements HasTable
     public $nuevo_estatus_estudiante = '';
     public $comentario_estatus_estudiante = '';
 
+    /**
+     * ✅ Obtener la Práctica del usuario actual
+     */
+    protected function getPractica()
+    {
+        return $this->record->practicas;
+    }
+
     public function infolist(Schema $schema): Schema
     {
         return $schema
@@ -43,94 +52,128 @@ class ViewPractica extends ViewRecord implements HasTable
                 Section::make('Datos del Estudiante')
                     ->icon('heroicon-o-user-group')
                     ->schema([
-                        TextEntry::make('user.name')
+                        // ✅ CAMBIADO: usar $this->record directamente (es User)
+                        TextEntry::make('name')
                             ->label('Nombre completo')
+                            ->formatStateUsing(fn () => $this->record->name . ' ' . $this->record->apellidos)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('user.matricula')
+                        TextEntry::make('matricula')
                             ->label('Matrícula')
                             ->icon('heroicon-o-identification'),
-                        TextEntry::make('user.carrera')
+                        TextEntry::make('carrera')
                             ->label('Carrera')
                             ->icon('heroicon-o-academic-cap'),
-                        TextEntry::make('user.semestre')
+                        TextEntry::make('semestre')
                             ->label('Semestre')
                             ->formatStateUsing(fn ($state) => $state . '° Semestre')
                             ->icon('heroicon-o-numbered-list'),
-                        TextEntry::make('user.grupo')
+                        TextEntry::make('grupo')
                             ->label('Grupo')
                             ->placeholder('No asignado')
                             ->icon('heroicon-o-users'),
-                        TextEntry::make('user.nombre_turno')
+                        TextEntry::make('turno.nombre')
                             ->label('Turno')
+                            ->default(fn () => $this->record->turno?->nombre ?? 'No definido')
                             ->icon('heroicon-o-clock'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: DATOS DE LA EMPRESA (solo si tiene Prácticas)
                 Section::make('Datos de la Empresa')
                     ->icon('heroicon-o-building-office-2')
+                    ->visible(fn () => $this->getPractica() !== null)
                     ->schema([
-                        TextEntry::make('empresa.nombre')
+                        TextEntry::make('practicas.empresa.nombre')
                             ->label('Empresa')
+                            ->default(fn () => $this->getPractica()?->empresa?->nombre ?? 'No especificada')
                             ->icon('heroicon-o-building-office'),
-                        TextEntry::make('area_asignada')
+                        TextEntry::make('practicas.area_asignada')
                             ->label('Área asignada')
-                            ->placeholder('No especificada')
+                            ->default(fn () => $this->getPractica()?->area_asignada ?? 'No especificada')
                             ->icon('heroicon-o-map-pin'),
                     ])
                     ->columns(2),
 
+                // ✅ SECCIÓN: SIN SOLICITUD (solo si NO tiene Prácticas)
+                Section::make('Sin Solicitud de Prácticas Profesionales')
+                    ->icon('heroicon-o-information-circle')
+                    ->visible(fn () => $this->getPractica() === null)
+                    ->schema([
+                        TextEntry::make('sin_solicitud')
+                            ->label('')
+                            ->default('Este alumno aún no ha solicitado Prácticas Profesionales.')
+                            ->icon('heroicon-o-exclamation-circle'),
+                    ]),
+
+                // ✅ SECCIÓN: FECHAS, HORAS Y HORARIO (solo si tiene Prácticas)
                 Section::make('Fechas, Horas y Horario')
                     ->icon('heroicon-o-calendar-days')
+                    ->visible(fn () => $this->getPractica() !== null)
                     ->schema([
-                        TextEntry::make('fecha_inicio')
+                        TextEntry::make('practicas.fecha_inicio')
                             ->label('Fecha de inicio')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getPractica()?->fecha_inicio)
                             ->icon('heroicon-o-calendar'),
-                        TextEntry::make('fecha_limite_final')
+                        TextEntry::make('practicas.fecha_limite_final')
                             ->label('Fecha de finalización')
                             ->date('d/m/Y')
+                            ->default(fn () => $this->getPractica()?->fecha_limite_final)
                             ->icon('heroicon-o-calendar-days'),
-                        TextEntry::make('horario.hora_inicio')
+                        TextEntry::make('practicas.horario.hora_inicio')
                             ->label('Horario')
-                            ->formatStateUsing(fn ($record) => 
-                                $record->horario ? $record->horario->hora_inicio . ' - ' . $record->horario->hora_fin : 'No definido'
-                            )
+                            ->formatStateUsing(function ($state) {
+                                $horario = $this->getPractica()?->horario;
+                                return $horario ? $horario->hora_inicio . ' - ' . $horario->hora_fin : 'No definido';
+                            })
                             ->icon('heroicon-o-clock'),
-                        TextEntry::make('horas_requeridas')
+                        TextEntry::make('practicas.horas_requeridas')
                             ->label('Horas requeridas')
+                            ->default(fn () => $this->getPractica()?->horas_requeridas ?? 0)
                             ->icon('heroicon-o-clock'),
-                        TextEntry::make('horas_completadas')
+                        TextEntry::make('practicas.horas_completadas')
                             ->label('Horas completadas')
+                            ->default(fn () => $this->getPractica()?->horas_completadas ?? 0)
                             ->icon('heroicon-o-check-circle'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: DATOS DE CONTACTO (solo si tiene Prácticas)
                 Section::make('Datos de Contacto')
                     ->icon('heroicon-o-phone')
+                    ->visible(fn () => $this->getPractica() !== null)
                     ->schema([
-                        TextEntry::make('gradoAcademico.abreviatura')
+                        TextEntry::make('practicas.gradoAcademico.abreviatura')
                             ->label('Grado (Carta)')
+                            ->default(fn () => $this->getPractica()?->gradoAcademico?->abreviatura ?? 'No definido')
                             ->icon('heroicon-o-user-circle'),
-                        TextEntry::make('nombre_persona_carta')
+                        TextEntry::make('practicas.nombre_persona_carta')
                             ->label('Nombre de la persona')
+                            ->default(fn () => $this->getPractica()?->nombre_persona_carta)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('cargo_persona_carta')
+                        TextEntry::make('practicas.cargo_persona_carta')
                             ->label('Cargo de la persona')
+                            ->default(fn () => $this->getPractica()?->cargo_persona_carta)
                             ->icon('heroicon-o-briefcase'),
-                        TextEntry::make('gradoAcademicoJefe.abreviatura')
+                        TextEntry::make('practicas.gradoAcademicoJefe.abreviatura')
                             ->label('Grado (Jefe)')
+                            ->default(fn () => $this->getPractica()?->gradoAcademicoJefe?->abreviatura ?? 'No definido')
                             ->icon('heroicon-o-user-circle'),
-                        TextEntry::make('nombre_jefe_inmediato')
+                        TextEntry::make('practicas.nombre_jefe_inmediato')
                             ->label('Nombre del jefe inmediato')
+                            ->default(fn () => $this->getPractica()?->nombre_jefe_inmediato)
                             ->icon('heroicon-o-user'),
-                        TextEntry::make('cargo_jefe_inmediato')
+                        TextEntry::make('practicas.cargo_jefe_inmediato')
                             ->label('Cargo del jefe inmediato')
+                            ->default(fn () => $this->getPractica()?->cargo_jefe_inmediato)
                             ->icon('heroicon-o-briefcase'),
                     ])
                     ->columns(3),
 
+                // ✅ SECCIÓN: INFORMACIÓN ADICIONAL (solo si tiene Prácticas)
                 Section::make('Información Adicional')
                     ->icon('heroicon-o-information-circle')
+                    ->visible(fn () => $this->getPractica() !== null)
                     ->footerActions([
                         Actions\Action::make('cambiar_estatus_estudiante')
                             ->label('Cambiar Estatus')
@@ -146,7 +189,7 @@ class ViewPractica extends ViewRecord implements HasTable
                                         'en_progreso' => 'En progreso',
                                         'liberado' => 'Liberado',
                                     ])
-                                    ->default(fn ($record) => $record->estatus ?? 'no_solicitado')
+                                    ->default(fn ($record) => $this->getPractica()?->estatus ?? 'no_solicitado')
                                     ->required(),
                                 Textarea::make('comentario_estatus_estudiante')
                                     ->label('Comentario (opcional)')
@@ -155,7 +198,7 @@ class ViewPractica extends ViewRecord implements HasTable
                                     ->maxLength(500),
                             ])
                             ->action(function (array $data) {
-                                $practica = Practica::where('user_id', $this->record->user_id)->first();
+                                $practica = $this->getPractica();
                                 
                                 if (!$practica) {
                                     Notification::make()
@@ -185,26 +228,22 @@ class ViewPractica extends ViewRecord implements HasTable
                                     'estatus_practicas' => $data['nuevo_estatus_estudiante']
                                 ]);
 
-                                // ✅ CORREGIDO: El comentario ahora se asocia a un Documento
                                 if (!empty($data['comentario_estatus_estudiante'])) {
-                                    // Buscar un documento del estudiante para asociar el comentario
-                                    $documento = Documento::where('user_id', $this->record->user_id)
+                                    $documento = Documento::where('user_id', $this->record->id)
                                         ->where('activo', true)
                                         ->whereHas('tipoDocumento', function($q) {
                                             $q->where('tramite', 'PP');
                                         })
                                         ->first();
 
-                                    // Si no hay documentos, buscamos cualquier documento del estudiante
                                     if (!$documento) {
-                                        $documento = Documento::where('user_id', $this->record->user_id)
+                                        $documento = Documento::where('user_id', $this->record->id)
                                             ->whereHas('tipoDocumento', function($q) {
                                                 $q->where('tramite', 'PP');
                                             })
                                             ->first();
                                     }
 
-                                    // Si aún no hay documentos, creamos un registro temporal
                                     if (!$documento) {
                                         $tipoDocumento = \App\Models\TipoDocumento::where('nombre', 'Solicitud de Prácticas Profesionales')
                                             ->where('tramite', 'PP')
@@ -212,7 +251,7 @@ class ViewPractica extends ViewRecord implements HasTable
                                         
                                         if ($tipoDocumento) {
                                             $documento = Documento::create([
-                                                'user_id' => $this->record->user_id,
+                                                'user_id' => $this->record->id,
                                                 'tipo_documento_id' => $tipoDocumento->id,
                                                 'archivo_pdf' => null,
                                                 'estatus' => 'pendiente',
@@ -221,13 +260,12 @@ class ViewPractica extends ViewRecord implements HasTable
                                         }
                                     }
 
-                                    // Si logramos obtener o crear un documento, guardamos el comentario
                                     if ($documento) {
                                         Comentario::create([
                                             'contenido' => 'Cambio de estatus de "' . $estatusAnterior . '" a "' . $data['nuevo_estatus_estudiante'] . '": ' . $data['comentario_estatus_estudiante'],
                                             'tipo' => 'admin',
-                                            'comentable_type' => 'App\\Models\\Documento', // ✅ CORREGIDO
-                                            'comentable_id' => $documento->id, // ✅ CORREGIDO
+                                            'comentable_type' => 'App\\Models\\Documento',
+                                            'comentable_id' => $documento->id,
                                             'user_id' => Auth::id(),
                                             'leido' => false
                                         ]);
@@ -253,13 +291,14 @@ class ViewPractica extends ViewRecord implements HasTable
                             ->modalWidth('md'),
                     ])
                     ->schema([
-                        TextEntry::make('apoyo_estudiante')
+                        TextEntry::make('practicas.apoyo_estudiante')
                             ->label('Apoyo al estudiante')
-                            ->placeholder('No especificado')
+                            ->default(fn () => $this->getPractica()?->apoyo_estudiante ?? 'No especificado')
                             ->icon('heroicon-o-hand-raised'),
-                        TextEntry::make('estatus')
+                        TextEntry::make('practicas.estatus')
                             ->label('Estatus de Prácticas')
                             ->badge()
+                            ->default(fn () => $this->getPractica()?->estatus ?? 'no_solicitado')
                             ->color(fn (string $state): string => match ($state) {
                                 'liberado' => 'success',
                                 'en_progreso' => 'info',
@@ -383,7 +422,7 @@ class ViewPractica extends ViewRecord implements HasTable
         return $table
             ->query(
                 Documento::query()
-                    ->where('user_id', $this->record->user_id)
+                    ->where('user_id', $this->record->id) // ✅ CAMBIADO: user_id → id
                     ->where('activo', true)
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
                     ->with(['tipoDocumento', 'comentarios.user'])

@@ -17,11 +17,17 @@ class ConfiguracionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Importación Masiva';
 
-    // ✅ GRUPO CORRECTO
+    protected static ?int $navigationSort = 2;
     public static function getNavigationGroup(): ?string
     {
-        return 'Configuración';
+        return '⚙️ Configuración';
     }
+
+    // ✅ GRUPO CORRECTO
+    // public static function getNavigationGroup(): ?string
+    // {
+    //     return 'Configuración';
+    // }
 
     public static function getPages(): array
     {

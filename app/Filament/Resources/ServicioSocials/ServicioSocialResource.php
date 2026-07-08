@@ -34,10 +34,16 @@ class ServicioSocialResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Servicio Social';
 
+    protected static ?int $navigationSort = 1;
     public static function getNavigationGroup(): ?string
     {
-        return 'Servicio Social';
+        return '📁 Gestión de Trámites';
     }
+
+    // public static function getNavigationGroup(): ?string
+    // {
+    //     return 'Servicio Social';
+    // }
 
     public static function form(Schema $schema): Schema
     {

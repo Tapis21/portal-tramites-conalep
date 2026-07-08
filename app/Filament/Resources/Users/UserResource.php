@@ -26,11 +26,17 @@ class UserResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Usuarios';
 
-    // ✅ GRUPO CORRECTO
+    protected static ?int $navigationSort = 1;
     public static function getNavigationGroup(): ?string
     {
-        return 'Configuración';
+        return '⚙️ Configuración';
     }
+
+    // ✅ GRUPO CORRECTO
+    // public static function getNavigationGroup(): ?string
+    // {
+    //     return 'Configuración';
+    // }
 
     public static function form(Schema $schema): Schema
     {

@@ -8,6 +8,7 @@ use App\Filament\Resources\Practicas\Pages\ListPracticas;
 use App\Filament\Resources\Practicas\Pages\ViewPractica;
 use App\Filament\Resources\Practicas\Schemas\PracticaForm;
 use App\Filament\Resources\Practicas\Tables\PracticasTable;
+use App\Models\User; // ✅ CAMBIADO: User en lugar de Practica
 use App\Models\Practica;
 use App\Models\Periodo;
 use BackedEnum;
@@ -16,15 +17,16 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
-
-// ✅ AGREGAR ESTOS USE
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select as FormSelect;
 use Filament\Notifications\Notification;
 
 class PracticaResource extends Resource
 {
-    protected static ?string $model = Practica::class;
+    // ✅ CAMBIADO: User como modelo base
+    protected static ?string $model = User::class;
+
+    protected static ?string $recordTitleAttribute = 'id';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
 
@@ -32,10 +34,16 @@ class PracticaResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Prácticas Profesionales';
 
+    protected static ?int $navigationSort = 2;
     public static function getNavigationGroup(): ?string
     {
-        return 'Prácticas Profesionales';
+        return '📁 Gestión de Trámites';
     }
+
+    // public static function getNavigationGroup(): ?string
+    // {
+    //     return 'Prácticas Profesionales';
+    // }
 
     public static function form(Schema $schema): Schema
     {
@@ -46,7 +54,14 @@ class PracticaResource extends Resource
     {
         $table = PracticasTable::configure($table);
 
-        // ✅ FILTRO SUPERIOR (EL ÚNICO QUE SE USA)
+        // ✅ QUERY BASE: TODOS LOS USUARIOS CON SU RELACIÓN A PRÁCTICAS
+        $table->query(
+            User::query()
+                ->with('practicas')
+                ->with('periodos')
+        );
+
+        // ✅ FILTRO SUPERIOR POR PERIODO
         $table->headerActions([
             Action::make('filtrar_periodo')
                 ->label('📅 Filtrar por Periodo')
@@ -65,7 +80,7 @@ class PracticaResource extends Resource
                                     } else {
                                         $label .= ' ❌ (Inactivo)';
                                     }
-                                    $count = \App\Models\User::whereHas('periodos', function ($q) use ($periodo) {
+                                    $count = User::whereHas('periodos', function ($q) use ($periodo) {
                                         $q->where('periodo_id', $periodo->id);
                                     })->count();
                                     $label .= " ($count alumnos)";
@@ -91,7 +106,7 @@ class PracticaResource extends Resource
                     } else {
                         Notification::make()
                             ->title('🔍 Filtro eliminado')
-                            ->body('Mostrando TODOS los alumnos, sin filtrar por periodo')
+                            ->body('Mostrando TODOS los alumnos')
                             ->info()
                             ->send();
                     }
@@ -111,7 +126,7 @@ class PracticaResource extends Resource
                             session()->forget('periodo_id_practicas');
                             Notification::make()
                                 ->title('🔄 Filtro reseteado')
-                                ->body('Mostrando TODOS los alumnos del sistema')
+                                ->body('Mostrando TODOS los alumnos')
                                 ->info()
                                 ->send();
                             return redirect()->route('filament.admin.resources.practicas.index');
@@ -119,7 +134,7 @@ class PracticaResource extends Resource
                 ]),
         ]);
 
-        // ✅ ELIMINAR FILTROS DE LA TABLA (sidebar)
+        // ✅ ELIMINAR FILTROS DE LA TABLA
         $table->filters([]);
 
         // ✅ INDICADOR DE FILTRO ACTIVO
@@ -131,10 +146,8 @@ class PracticaResource extends Resource
                 $table->heading("📌 Mostrando alumnos del periodo: {$periodo->nombre}");
                 
                 $table->modifyQueryUsing(function ($query) use ($periodoId) {
-                    $query->whereHas('user', function ($q) use ($periodoId) {
-                        $q->whereHas('periodos', function ($sq) use ($periodoId) {
-                            $sq->where('periodo_id', $periodoId);
-                        });
+                    $query->whereHas('periodos', function ($sq) use ($periodoId) {
+                        $sq->where('periodo_id', $periodoId);
                     });
                 });
             }

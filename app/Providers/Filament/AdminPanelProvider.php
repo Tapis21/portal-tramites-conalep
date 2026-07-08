@@ -86,15 +86,8 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(false),
             ])
             // ================================================================
-            // 🚀 SOLO EL DASHBOARD
+            // 🚀 ELIMINADO: El Dashboard se muestra automáticamente
             // ================================================================
-            ->navigationItems([
-                NavigationItem::make('dashboard')
-                    ->label('Escritorio')
-                    ->icon('heroicon-o-home')
-                    ->url('/admin/dashboard')
-                    ->isActiveWhen(fn () => request()->routeIs('filament.admin.pages.dashboard'))
-                    ->group('📋 General'),
-            ]);
+            ->navigationItems([]); // ✅ Vacío para que solo se muestren los Resources y el Dashboard automático
     }
 }
