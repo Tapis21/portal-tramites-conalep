@@ -19,7 +19,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',           // nombre(s)
+        'name',
         'apellidos',
         'matricula',
         'carrera',
@@ -27,6 +27,7 @@ class User extends Authenticatable
         'semestre',
         'email',
         'password',
+        'password_changed_at',
         'estatus_servicio_social',
         'turno_id',
         'grupo',
@@ -52,6 +53,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime', // ✅ AGREGAR ESTA LÍNEA
         ];
     }
 
