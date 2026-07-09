@@ -16,6 +16,7 @@ use Filament\Actions\Action;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\UsersImport;
 use App\Imports\EmpresasImport;
+use Illuminate\Support\Facades\Storage;
 
 class ImportarDatos extends Page implements HasForms
 {
@@ -186,11 +187,12 @@ class ImportarDatos extends Page implements HasForms
                                     ->disk('local')
                                     ->directory('imports')
                                     ->placeholder('📂 Arrastra tu archivo aquí o haz clic para seleccionar')
-                                    ->hint('📌 Asegúrate de usar la plantilla descargada'),
+                                    ->hint('📌 Asegúrate de usar la plantilla descargada')
+                                    ->uploadingMessage('📤 Subiendo archivo...'),
                             ])
                             ->compact(),
 
-                        // PASO 3: Acciones finales
+                        // PASO 3: Acciones finales (SIN GRID)
                         Section::make('3️⃣ ¡Ejecuta la importación!')
                             ->description('Descarga la plantilla si no la tienes, luego importa tu archivo.')
                             ->schema([
@@ -218,7 +220,12 @@ class ImportarDatos extends Page implements HasForms
                                     ->color('primary')
                                     ->action('importar')
                                     ->submit('importar')
-                                    ->extraAttributes(['style' => 'width: 100%; justify-content: center;']),
+                                    ->extraAttributes(['style' => 'width: 100%; justify-content: center;'])
+                                    ->disabled(fn ($livewire) => empty($livewire->data['archivo']))
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Confirmar importación')
+                                    ->modalDescription('¿Estás seguro de importar los datos? Esta acción no se puede deshacer.')
+                                    ->modalSubmitActionLabel('Sí, importar'),
                             ])
                             ->compact(),
                     ])
@@ -369,12 +376,12 @@ class ImportarDatos extends Page implements HasForms
         }
 
         try {
-            $archivo = storage_path('app/' . $data['archivo']);
+            $archivo = Storage::disk('local')->path($data['archivo']);
 
             if (!file_exists($archivo)) {
                 Notification::make()
                     ->title('Error')
-                    ->body('No se pudo encontrar el archivo.')
+                    ->body('No se pudo encontrar el archivo. Verifica que se haya subido correctamente.')
                     ->danger()
                     ->send();
                 return;

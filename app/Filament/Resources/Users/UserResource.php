@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use App\Models\EstudiantePeriodo;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -27,16 +28,11 @@ class UserResource extends Resource
     protected static ?string $pluralModelLabel = 'Usuarios';
 
     protected static ?int $navigationSort = 1;
+
     public static function getNavigationGroup(): ?string
     {
         return '⚙️ Configuración';
     }
-
-    // ✅ GRUPO CORRECTO
-    // public static function getNavigationGroup(): ?string
-    // {
-    //     return 'Configuración';
-    // }
 
     public static function form(Schema $schema): Schema
     {

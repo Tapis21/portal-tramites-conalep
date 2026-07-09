@@ -6,6 +6,8 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Periodo;
+use App\Models\EstudiantePeriodo;
 
 class UserForm
 {
@@ -52,6 +54,33 @@ class UserForm
                         '5' => '5º',
                         '6' => '6º',
                     ]),
+
+                // ✅ NUEVO CAMPO: PERIODO
+                Select::make('periodo_id')
+                    ->label('Periodo')
+                    ->options(
+                        Periodo::where('activo', true)
+                            ->orderBy('año_inicio', 'desc')
+                            ->pluck('nombre', 'id')
+                            ->toArray()
+                    )
+                    ->placeholder('Selecciona un periodo')
+                    ->helperText('Periodo actual del estudiante')
+                    ->default(function ($record) {
+                        if ($record) {
+                            $periodo = $record->periodoActual();
+                            return $periodo ? $periodo->id : null;
+                        }
+                        return null;
+                    })
+                    ->afterStateHydrated(function ($state, $set, $record) {
+                        if ($record) {
+                            $periodo = $record->periodoActual();
+                            if ($periodo) {
+                                $set('periodo_id', $periodo->id);
+                            }
+                        }
+                    }),
 
                 TextInput::make('password')
                     ->label('Contraseña')

@@ -8,7 +8,7 @@ use App\Filament\Resources\ServicioSocials\Pages\ListServicioSocials;
 use App\Filament\Resources\ServicioSocials\Pages\ViewServicioSocial;
 use App\Filament\Resources\ServicioSocials\Schemas\ServicioSocialForm;
 use App\Filament\Resources\ServicioSocials\Tables\ServicioSocialsTable;
-use App\Models\User;  // ✅ USAR User COMO MODELO BASE
+use App\Models\User;
 use App\Models\ServicioSocial;
 use App\Models\Periodo;
 use BackedEnum;
@@ -23,7 +23,6 @@ use Filament\Notifications\Notification;
 
 class ServicioSocialResource extends Resource
 {
-    // ✅ CAMBIAR A User COMO MODELO BASE
     protected static ?string $model = User::class;
 
     protected static ?string $recordTitleAttribute = 'id';
@@ -35,15 +34,11 @@ class ServicioSocialResource extends Resource
     protected static ?string $pluralModelLabel = 'Servicio Social';
 
     protected static ?int $navigationSort = 1;
+
     public static function getNavigationGroup(): ?string
     {
         return '📁 Gestión de Trámites';
     }
-
-    // public static function getNavigationGroup(): ?string
-    // {
-    //     return 'Servicio Social';
-    // }
 
     public static function form(Schema $schema): Schema
     {
@@ -54,15 +49,15 @@ class ServicioSocialResource extends Resource
     {
         $table = ServicioSocialsTable::configure($table);
 
-        // ✅ QUERY BASE: TODOS LOS USUARIOS CON SU RELACIÓN A SERVICIO SOCIAL
         $table->query(
             User::query()
                 ->with('servicioSocial')
                 ->with('periodos')
         );
 
-        // ✅ FILTRO SUPERIOR POR PERIODO
+        // ✅ HEADER ACTIONS (FILTRO + CREAR PERIODO)
         $table->headerActions([
+            // 📅 FILTRO POR PERIODO
             Action::make('filtrar_periodo')
                 ->label('📅 Filtrar por Periodo')
                 ->icon('heroicon-o-funnel')
@@ -132,6 +127,14 @@ class ServicioSocialResource extends Resource
                             return redirect()->route('filament.admin.resources.servicio-socials.index');
                         }),
                 ]),
+
+            // ✅ NUEVO BOTÓN: CREAR PERIODO
+            Action::make('crear_periodo')
+                ->label('➕ Crear periodo')
+                ->icon('heroicon-o-plus-circle')
+                ->color('success')
+                ->url('/admin/periodos/create')
+                ->openUrlInNewTab(false),
         ]);
 
         // ✅ ELIMINAR FILTROS DE LA TABLA

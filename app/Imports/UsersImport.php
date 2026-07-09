@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
 use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\WithValidation;
 
 class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
 {
@@ -19,8 +20,9 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
     protected $imported = 0;
     protected $errors = [];
     protected $logs = [];
+    protected $rowCount = 0;
 
-    // Mapeo de códigos de carrera
+    // ✅ Mapeo de códigos de carrera
     protected $carreras = [
         'ADMO' => 'Administración',
         'INFO' => 'Informática',
@@ -28,32 +30,82 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
         'EGAD' => 'Expresión Gráfica Digital',
     ];
 
+    // ✅ COLUMNAS REQUERIDAS (con y sin acento)
+    protected $requiredColumns = ['matricula', 'nombre', 'primer_apellido', 'grupo_referente', 'periodo'];
+    protected $columnAliases = [
+        'matricula' => ['matricula', 'Matrícula', 'MATRÍCULA', 'Matricula'],
+        'nombre' => ['nombre', 'Nombre', 'NOMBRE'],
+        'primer_apellido' => ['primer_apellido', 'Primer apellido', 'Primer Apellido', 'PRIMER APELLIDO'],
+        'segundo_apellido' => ['segundo_apellido', 'Segundo apellido', 'Segundo Apellido', 'SEGUNDO APELLIDO'],
+        'grupo_referente' => ['grupo_referente', 'Grupo Referente', 'GRUPO REFERENTE', 'grupo referente'],
+        'periodo' => ['periodo', 'Periodo', 'PERIODO'],
+    ];
+
     public function collection(Collection $rows)
     {
+        if ($rows->isEmpty()) {
+            $this->errors[] = "❌ El archivo está vacío o no contiene datos.";
+            return;
+        }
+
+        // ✅ OBTENER NOMBRES REALES DE COLUMNAS
+        $firstRow = $rows->first();
+        $columnMap = $this->getColumnMap($firstRow);
+
+        // ✅ VALIDAR COLUMNAS REQUERIDAS
+        $missingColumns = [];
+        foreach ($this->requiredColumns as $column) {
+            if (!isset($columnMap[$column])) {
+                $missingColumns[] = $column;
+            }
+        }
+
+        if (!empty($missingColumns)) {
+            $this->errors[] = "❌ Columnas faltantes en el archivo: " . implode(', ', $missingColumns);
+            $this->errors[] = "📌 Asegúrate de que tu archivo tenga las columnas: Matrícula, Nombre, Primer apellido, Grupo Referente, Periodo";
+            return;
+        }
+
         foreach ($rows as $row) {
+            $this->rowCount++;
+
             try {
-                // Validar campos requeridos
-                if (empty($row['matricula']) || empty($row['nombre']) || empty($row['primer_apellido'])) {
-                    $this->errors[] = "❌ Fila incompleta: matrícula {$row['matricula']}";
+                // ✅ OBTENER VALORES USANDO EL MAPEO DE COLUMNAS
+                $matricula = $this->getColumnValue($row, $columnMap, 'matricula');
+                $nombre = $this->getColumnValue($row, $columnMap, 'nombre');
+                $primerApellido = $this->getColumnValue($row, $columnMap, 'primer_apellido');
+                $segundoApellido = $this->getColumnValue($row, $columnMap, 'segundo_apellido');
+                $grupoReferente = $this->getColumnValue($row, $columnMap, 'grupo_referente');
+                $periodoNombre = $this->getColumnValue($row, $columnMap, 'periodo');
+
+                if (empty($matricula) || empty($nombre) || empty($primerApellido)) {
+                    $this->errors[] = "❌ Fila {$this->rowCount}: Faltan datos obligatorios (Matrícula, Nombre o Primer apellido)";
                     continue;
                 }
 
-                // Extraer datos del grupo
-                $grupoReferente = $row['grupo_referente'] ?? '';
+                // ✅ LIMPIAR Y NORMALIZAR DATOS (UTF-8)
+                $matricula = $this->sanitizar($matricula);
+                $nombre = $this->sanitizar($nombre);
+                $primerApellido = $this->sanitizar($primerApellido);
+                $segundoApellido = $this->sanitizar($segundoApellido);
+                $grupoReferente = $this->sanitizar($grupoReferente);
+                $periodoNombre = $this->sanitizar($periodoNombre);
+
+                // ✅ EXTRAER DATOS DEL GRUPO
                 $semestre = $this->extraerSemestre($grupoReferente);
                 $carrera = $this->extraerCarrera($grupoReferente);
                 $turnoId = $this->extraerTurno($grupoReferente);
 
-                // Generar email y password
-                $email = $this->generarEmail($row['matricula']);
-                $password = Hash::make($row['matricula']);
+                // ✅ GENERAR EMAIL Y PASSWORD
+                $email = $this->generarEmail($matricula);
+                $password = Hash::make($matricula);
 
-                // Crear o actualizar usuario
+                // ✅ CREAR O ACTUALIZAR USUARIO
                 $user = User::updateOrCreate(
-                    ['matricula' => $row['matricula']],
+                    ['matricula' => $matricula],
                     [
-                        'name' => trim($row['nombre']),
-                        'apellidos' => trim($row['primer_apellido'] . ' ' . ($row['segundo_apellido'] ?? '')),
+                        'name' => trim($nombre),
+                        'apellidos' => trim($primerApellido . ' ' . ($segundoApellido ?? '')),
                         'email' => $email,
                         'password' => $password,
                         'role' => 'estudiante',
@@ -66,15 +118,11 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
                     ]
                 );
 
-                // ================================================================
-                // 🔥 ASIGNACIÓN DE PERIODO (TABLA estudiante_periodo)
-                // ================================================================
-                $periodoNombre = $row['periodo'] ?? null;
+                // ✅ ASIGNACIÓN DE PERIODO
                 if (!empty($periodoNombre)) {
                     $periodo = $this->obtenerOCrearPeriodo($periodoNombre);
                     
                     if ($periodo) {
-                        // Verificar si ya tiene este periodo asignado
                         $existe = EstudiantePeriodo::where('user_id', $user->id)
                             ->where('periodo_id', $periodo->id)
                             ->exists();
@@ -90,27 +138,62 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
                 }
 
                 $this->imported++;
-                $this->logs[] = "✅ Importado: {$row['matricula']} - {$row['nombre']}";
+                $this->logs[] = "✅ Importado: {$matricula} - {$nombre}";
 
             } catch (\Exception $e) {
-                $this->errors[] = "❌ Error con {$row['matricula']}: " . $e->getMessage();
+                $this->errors[] = "❌ Fila {$this->rowCount} - Error: " . $e->getMessage();
             }
         }
     }
 
-    // ================================================================
-    // 🔥 MÉTODO PARA OBTENER O CREAR PERIODO
-    // ================================================================
+    // ✅ OBTENER MAPEO DE COLUMNAS DEL ARCHIVO
+    private function getColumnMap($row)
+    {
+        $map = [];
+        $rowKeys = array_keys($row->toArray());
+        
+        foreach ($this->columnAliases as $key => $aliases) {
+            foreach ($aliases as $alias) {
+                if (in_array($alias, $rowKeys)) {
+                    $map[$key] = $alias;
+                    break;
+                }
+            }
+        }
+        
+        return $map;
+    }
+
+    // ✅ OBTENER VALOR DE COLUMNA USANDO EL MAPEO
+    private function getColumnValue($row, $columnMap, $key)
+    {
+        if (isset($columnMap[$key]) && isset($row[$columnMap[$key]])) {
+            $value = $row[$columnMap[$key]];
+            return !empty($value) ? $value : null;
+        }
+        return null;
+    }
+
+    // ✅ SANITIZAR TEXTO (UTF-8)
+    private function sanitizar($texto)
+    {
+        if (empty($texto)) return $texto;
+        // Convertir a UTF-8 si no lo está
+        if (!mb_check_encoding($texto, 'UTF-8')) {
+            $texto = mb_convert_encoding($texto, 'UTF-8', 'ISO-8859-1');
+        }
+        // Eliminar caracteres de control
+        $texto = preg_replace('/[\x00-\x1F\x7F]/u', '', $texto);
+        return trim($texto);
+    }
+
     private function obtenerOCrearPeriodo($nombrePeriodo)
     {
         if (empty($nombrePeriodo)) return null;
 
-        // Buscar el periodo en la base de datos
         $periodo = Periodo::where('nombre', $nombrePeriodo)->first();
 
-        // Si no existe, lo creamos
         if (!$periodo) {
-            // Extraer años del nombre (ej: "2023-2026")
             preg_match('/(\d{4})-(\d{4})/', $nombrePeriodo, $matches);
             
             if (!empty($matches)) {
@@ -121,10 +204,9 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
                     'año_inicio' => $añoInicio,
                     'año_fin' => $añoFin,
                     'nombre' => $nombrePeriodo,
-                    'activo' => false, // Por defecto no activo (el admin lo activará)
+                    'activo' => false,
                 ]);
             } else {
-                // Si el formato no es válido
                 $this->errors[] = "❌ Formato de periodo inválido: {$nombrePeriodo} (debe ser YYYY-YYYY)";
                 return null;
             }
@@ -132,10 +214,6 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
 
         return $periodo;
     }
-
-    // ================================================================
-    // 🔥 MÉTODOS AUXILIARES
-    // ================================================================
 
     private function extraerSemestre($grupo)
     {

@@ -122,66 +122,60 @@ Route::middleware('auth')->group(function () {
 
     // ==================== RUTAS PARA PLANTILLAS (ADMIN) ====================
     Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+        // ✅ PLANTILLA ALUMNOS EN XLSX
         Route::get('/plantilla-alumnos', function () {
-            $headers = ['Matrícula', 'Nombre', 'Primer apellido', 'Segundo apellido', 'Grupo Referente', 'Periodo'];
-            $callback = function() use ($headers) {
+            return response()->streamDownload(function () {
                 $file = fopen('php://output', 'w');
                 
-                // Encabezados
+                // ✅ BOM UTF-8 para compatibilidad
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // ✅ Encabezados con acentos
+                $headers = ['Matrícula', 'Nombre', 'Primer apellido', 'Segundo apellido', 'Grupo Referente', 'Periodo'];
                 fputcsv($file, $headers);
                 
-                // Línea de instrucción (con # para que sea comentario)
-                fputcsv($file, ['# 📌 No modifiques los nombres de las columnas UNA VEZ LEIDO CADA AVISO ELIMINAR TODO EXCEPTO LAS COLUMNAS', '', '', '', '', '']);
-
-                fputcsv($file, ['', '', '', '', '', '']); // Línea vacía
-
+                // ✅ Líneas de instrucción
                 fputcsv($file, ['# ⚠️ DATOS DE EJEMPLO - BORRAR Y REEMPLAZAR', '', '', '', '', '']);
                 fputcsv($file, ['# 📌 Reemplaza estos datos con los tuyos', '', '', '', '', '']);
-
-                // Datos de ejemplo
-                fputcsv($file, ['230090047-5', 'DARSY ALINA', 'ROMAN', 'HUCHIN', '601-ADMO23', '2023-2026']);
+                fputcsv($file, ['# 📌 No modifiques los nombres de las columnas', '', '', '', '', '']);
+                fputcsv($file, ['', '', '', '', '', '']);
+                
+                // ✅ Datos de ejemplo (con acentos)
+                fputcsv($file, ['230090047-5', 'DARSY ALINA', 'ROMÁN', 'HUCHÍN', '601-ADMO23', '2023-2026']);
                 fputcsv($file, ['232860005-7', 'ALDO YAEL', 'PECH', 'ILLESCAS', '601-ADMO23', '2023-2026']);
                 
-                fputcsv($file, ['', '', '', '', '', '']); // Línea vacía
-                
-                // Separador
+                fputcsv($file, ['', '', '', '', '', '']);
                 fputcsv($file, ['# --- TUS DATOS EMPIEZAN AQUÍ ---', '', '', '', '', '']);
                 
                 fclose($file);
-            };
-            return response()->stream($callback, 200, [
-                'Content-Type' => 'text/csv',
+            }, 'plantilla_alumnos.csv', [
+                'Content-Type' => 'text/csv; charset=UTF-8',
                 'Content-Disposition' => 'attachment; filename="plantilla_alumnos.csv"',
             ]);
         })->name('admin.plantilla.alumnos');
 
+        // ✅ PLANTILLA EMPRESAS EN XLSX
         Route::get('/plantilla-empresas', function () {
-            $headers = ['Nombre', 'Dirección', 'Teléfono', 'Contacto', 'Servicio Social', 'Prácticas', 'Dual', 'Fecha_Termino_Convenio'];
-            $callback = function() use ($headers) {
+            return response()->streamDownload(function () {
                 $file = fopen('php://output', 'w');
                 
-                // Encabezados
-                fputcsv($file, $headers);
-
-                // Línea de instrucción (con # para que sea comentario)
-                fputcsv($file, ['# 📌 No modifiques los nombres de las columnas UNA VEZ LEIDO CADA AVISO ELIMINAR TODO EXCEPTO LAS COLUMNAS', '', '', '', '', '']);
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
                 
-                // Línea de instrucción
+                $headers = ['Nombre', 'Dirección', 'Teléfono', 'Contacto', 'Servicio Social', 'Prácticas', 'Dual', 'Fecha_Termino_Convenio'];
+                fputcsv($file, $headers);
+                
                 fputcsv($file, ['# ⚠️ DATOS DE EJEMPLO - BORRAR Y REEMPLAZAR', '', '', '', '', '', '', '']);
                 fputcsv($file, ['# 📌 Reemplaza estos datos con los tuyos', '', '', '', '', '', '', '']);
-                fputcsv($file, ['', '', '', '', '', '', '', '']); // Línea vacía
+                fputcsv($file, ['', '', '', '', '', '', '', '']);
                 
-                // Datos de ejemplo
-                fputcsv($file, ['CONALEP Cancún II', 'Av. Ejemplo #123', '998-123-4567', 'contacto@conalep.edu.mx', 'SI', 'SI', 'NO', '2025-12-31']);
+                fputcsv($file, ['CONALEP Cancún II', 'Av. Ejemplo #123', '998-123-4567', 'contacto@conalep.edu.mx', 'SÍ', 'SÍ', 'NO', '2025-12-31']);
                 
-                // Separador
                 fputcsv($file, ['', '', '', '', '', '', '', '']);
                 fputcsv($file, ['# --- TUS DATOS EMPIEZAN AQUÍ ---', '', '', '', '', '', '', '']);
                 
                 fclose($file);
-            };
-            return response()->stream($callback, 200, [
-                'Content-Type' => 'text/csv',
+            }, 'plantilla_empresas.csv', [
+                'Content-Type' => 'text/csv; charset=UTF-8',
                 'Content-Disposition' => 'attachment; filename="plantilla_empresas.csv"',
             ]);
         })->name('admin.plantilla.empresas');

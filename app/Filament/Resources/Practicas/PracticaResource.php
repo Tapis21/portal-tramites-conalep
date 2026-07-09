@@ -132,6 +132,13 @@ class PracticaResource extends Resource
                             return redirect()->route('filament.admin.resources.practicas.index');
                         }),
                 ]),
+                
+            Action::make('crear_periodo')
+                ->label('➕ Crear periodo')
+                ->icon('heroicon-o-plus-circle')
+                ->color('success')
+                ->url('/admin/periodos/create')
+                ->openUrlInNewTab(false),
         ]);
 
         // ✅ ELIMINAR FILTROS DE LA TABLA
