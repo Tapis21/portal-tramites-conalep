@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Periodos;
 use App\Filament\Resources\Periodos\Pages\CreatePeriodo;
 use App\Filament\Resources\Periodos\Pages\EditPeriodo;
 use App\Filament\Resources\Periodos\Pages\ListPeriodos;
+use App\Filament\Resources\Periodos\Pages\ViewUsuariosPeriodo;
 use App\Filament\Resources\Periodos\Schemas\PeriodoForm;
 use App\Filament\Resources\Periodos\Tables\PeriodosTable;
 use App\Models\Periodo;
@@ -13,7 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Filament\Actions\Action; // ✅ CORRECTO: Filament\Actions\Action
+use Filament\Actions\Action;
 
 class PeriodoResource extends Resource
 {
@@ -41,7 +42,6 @@ class PeriodoResource extends Resource
     {
         $table = PeriodosTable::configure($table);
 
-        // ✅ BOTÓN CREAR PERIODO
         $table->headerActions([
             Action::make('crear_periodo')
                 ->label('➕ Crear periodo')
@@ -65,6 +65,7 @@ class PeriodoResource extends Resource
             'index' => ListPeriodos::route('/'),
             'create' => CreatePeriodo::route('/create'),
             'edit' => EditPeriodo::route('/{record}/edit'),
+            'usuarios' => ViewUsuariosPeriodo::route('/{record}/usuarios'), // ✅ NUEVA PÁGINA
         ];
     }
 }

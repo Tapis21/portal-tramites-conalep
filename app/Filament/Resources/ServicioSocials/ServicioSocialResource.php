@@ -25,7 +25,12 @@ class ServicioSocialResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getRecordTitle($record): string
+    {
+        return $record->name . ' ' . $record->apellidos;
+    }
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
 
@@ -59,8 +64,8 @@ class ServicioSocialResource extends Resource
         $table->headerActions([
             // 📅 FILTRO POR PERIODO
             Action::make('filtrar_periodo')
-                ->label('📅 Filtrar por Periodo')
-                ->icon('heroicon-o-funnel')
+                ->label('Filtrar por Periodo') // ✅ Sin emoji en label
+                ->icon('heroicon-o-funnel') // ✅ Icono de Heroicon
                 ->color('primary')
                 ->form([
                     FormSelect::make('periodo_id')
@@ -83,7 +88,7 @@ class ServicioSocialResource extends Resource
                                 })
                                 ->toArray()
                         )
-                        ->placeholder('🔍 Mostrar todos los periodos')
+                        ->placeholder('Mostrar todos los periodos') // ✅ Sin emoji
                         ->default(request()->get('periodo_id') ?? session('periodo_id_servicio_social', null))
                         ->searchable()
                         ->native(false),
@@ -115,7 +120,8 @@ class ServicioSocialResource extends Resource
                 ->modalWidth('md')
                 ->extraModalFooterActions([
                     Action::make('reset_filtro')
-                        ->label('🔄 Resetear filtro')
+                        ->label('Resetear filtro') // ✅ Sin emoji en label
+                        ->icon('heroicon-o-arrow-path') // ✅ Icono de Heroicon
                         ->color('danger')
                         ->action(function () {
                             session()->forget('periodo_id_servicio_social');
@@ -128,10 +134,10 @@ class ServicioSocialResource extends Resource
                         }),
                 ]),
 
-            // ✅ NUEVO BOTÓN: CREAR PERIODO
+            // ✅ BOTÓN: CREAR PERIODO
             Action::make('crear_periodo')
-                ->label('➕ Crear periodo')
-                ->icon('heroicon-o-plus-circle')
+                ->label('Crear periodo') // ✅ Sin emoji en label
+                ->icon('heroicon-o-plus-circle') // ✅ Icono de Heroicon
                 ->color('success')
                 ->url('/admin/periodos/create')
                 ->openUrlInNewTab(false),
@@ -170,7 +176,7 @@ class ServicioSocialResource extends Resource
     {
         return [
             'index' => ListServicioSocials::route('/'),
-            'create' => CreateServicioSocial::route('/create'),
+            // 'create' => CreateServicioSocial::route('/create'),
             'edit' => EditServicioSocial::route('/{record}/edit'),
             'view' => ViewServicioSocial::route('/{record}'),
         ];

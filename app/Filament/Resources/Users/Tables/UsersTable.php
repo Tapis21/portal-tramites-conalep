@@ -17,6 +17,16 @@ class UsersTable
     public static function configure(Table $table): Table
     {
         return $table
+            // ✅ SOLO USUARIOS CON PERIODO ACTIVO O SIN PERIODO
+            ->query(
+                \App\Models\User::query()
+                    ->where(function ($query) {
+                        $query->whereHas('periodos', function ($q) {
+                            $q->where('activo', true);
+                        })->orWhereDoesntHave('periodos');
+                    })
+                    ->with('periodos')
+            )
             ->columns([
                 TextColumn::make('matricula')
                     ->label('Matrícula')
@@ -43,26 +53,8 @@ class UsersTable
                         default => 'gray',
                     }),
 
-                // ✅ COLUMNA: Contraseña (muestra matrícula o "🔒 Cambiada")
-                TextColumn::make('password_display')
-                    ->label('Contraseña')
-                    ->formatStateUsing(function ($record) {
-                        if ($record->password_changed_at) {
-                            return '🔒 Cambiada';
-                        }
-                        return $record->matricula;
-                    })
-                    ->color(fn ($record) => $record->password_changed_at ? 'gray' : 'warning')
-                    ->tooltip(fn ($record) => $record->password_changed_at 
-                        ? 'La contraseña fue cambiada por el usuario o administrador'
-                        : 'Contraseña por defecto (matrícula)'
-                    )
-                    ->copyable()
-                    ->copyMessage('Contraseña copiada al portapapeles')
-                    ->copyMessageDuration(2000),
-
                 IconColumn::make('password_changed_at')
-                    ->label('¿Cambiada?')
+                    ->label('Contraseña cambiada')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
@@ -117,7 +109,7 @@ class UsersTable
                     }),
             ])
             ->actions([
-                // ✅ ACCIÓN: Restablecer contraseña (envía email)
+                // ✅ ACCIÓN: Restablecer contraseña
                 Action::make('reset_password')
                     ->label('Restablecer contraseña')
                     ->icon('heroicon-o-envelope')

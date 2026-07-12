@@ -6,7 +6,7 @@ use App\Filament\Resources\Practicas\PracticaResource;
 use App\Models\Documento;
 use App\Models\Comentario;
 use App\Models\Practica;
-use App\Models\User; // ✅ AGREGADO
+use App\Models\User;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -45,6 +45,12 @@ class ViewPractica extends ViewRecord implements HasTable
         return $this->record->practicas;
     }
 
+    public function getTitle(): string
+    {
+        $nombre = $this->record->name . ' ' . $this->record->apellidos;
+        return "Revisando a: {$nombre}";
+    }
+
     public function infolist(Schema $schema): Schema
     {
         return $schema
@@ -52,7 +58,6 @@ class ViewPractica extends ViewRecord implements HasTable
                 Section::make('Datos del Estudiante')
                     ->icon('heroicon-o-user-group')
                     ->schema([
-                        // ✅ CAMBIADO: usar $this->record directamente (es User)
                         TextEntry::make('name')
                             ->label('Nombre completo')
                             ->formatStateUsing(fn () => $this->record->name . ' ' . $this->record->apellidos)
@@ -78,7 +83,6 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: DATOS DE LA EMPRESA (solo si tiene Prácticas)
                 Section::make('Datos de la Empresa')
                     ->icon('heroicon-o-building-office-2')
                     ->visible(fn () => $this->getPractica() !== null)
@@ -94,7 +98,6 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(2),
 
-                // ✅ SECCIÓN: SIN SOLICITUD (solo si NO tiene Prácticas)
                 Section::make('Sin Solicitud de Prácticas Profesionales')
                     ->icon('heroicon-o-information-circle')
                     ->visible(fn () => $this->getPractica() === null)
@@ -105,7 +108,6 @@ class ViewPractica extends ViewRecord implements HasTable
                             ->icon('heroicon-o-exclamation-circle'),
                     ]),
 
-                // ✅ SECCIÓN: FECHAS, HORAS Y HORARIO (solo si tiene Prácticas)
                 Section::make('Fechas, Horas y Horario')
                     ->icon('heroicon-o-calendar-days')
                     ->visible(fn () => $this->getPractica() !== null)
@@ -122,7 +124,7 @@ class ViewPractica extends ViewRecord implements HasTable
                             ->icon('heroicon-o-calendar-days'),
                         TextEntry::make('practicas.horario.hora_inicio')
                             ->label('Horario')
-                            ->formatStateUsing(function ($state) {
+                            ->formatStateUsing(function () {
                                 $horario = $this->getPractica()?->horario;
                                 return $horario ? $horario->hora_inicio . ' - ' . $horario->hora_fin : 'No definido';
                             })
@@ -138,7 +140,6 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: DATOS DE CONTACTO (solo si tiene Prácticas)
                 Section::make('Datos de Contacto')
                     ->icon('heroicon-o-phone')
                     ->visible(fn () => $this->getPractica() !== null)
@@ -170,7 +171,6 @@ class ViewPractica extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: INFORMACIÓN ADICIONAL (solo si tiene Prácticas)
                 Section::make('Información Adicional')
                     ->icon('heroicon-o-information-circle')
                     ->visible(fn () => $this->getPractica() !== null)
@@ -422,7 +422,7 @@ class ViewPractica extends ViewRecord implements HasTable
         return $table
             ->query(
                 Documento::query()
-                    ->where('user_id', $this->record->id) // ✅ CAMBIADO: user_id → id
+                    ->where('user_id', $this->record->id)
                     ->where('activo', true)
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
                     ->with(['tipoDocumento', 'comentarios.user'])
@@ -577,8 +577,8 @@ class ViewPractica extends ViewRecord implements HasTable
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
-        ];
+        $practica = $this->getPractica();
+
+        return [];
     }
 }

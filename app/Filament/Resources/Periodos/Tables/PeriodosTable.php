@@ -5,13 +5,15 @@ namespace App\Filament\Resources\Periodos\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
-use Filament\Actions\Action; // ✅ CORRECTO: Filament\Actions\Action
+use Filament\Actions\Action;
 
 class PeriodosTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            // ✅ HACER QUE TODA LA FILA SEA CLICKEABLE
+            ->recordUrl(fn ($record) => route('filament.admin.resources.periodos.usuarios', $record))
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')
@@ -39,7 +41,7 @@ class PeriodosTable
                     ->falseColor('danger'),
             ])
             ->actions([
-                // ✅ CORREGIDO: Usar Action con url en lugar de EditAction
+                // ✅ BOTÓN "EDITAR" (independiente del click en fila)
                 Action::make('editar')
                     ->label('Editar')
                     ->icon('heroicon-o-pencil-square')

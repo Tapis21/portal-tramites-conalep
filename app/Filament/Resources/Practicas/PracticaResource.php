@@ -8,7 +8,7 @@ use App\Filament\Resources\Practicas\Pages\ListPracticas;
 use App\Filament\Resources\Practicas\Pages\ViewPractica;
 use App\Filament\Resources\Practicas\Schemas\PracticaForm;
 use App\Filament\Resources\Practicas\Tables\PracticasTable;
-use App\Models\User; // ✅ CAMBIADO: User en lugar de Practica
+use App\Models\User;
 use App\Models\Practica;
 use App\Models\Periodo;
 use BackedEnum;
@@ -23,10 +23,14 @@ use Filament\Notifications\Notification;
 
 class PracticaResource extends Resource
 {
-    // ✅ CAMBIADO: User como modelo base
     protected static ?string $model = User::class;
 
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getRecordTitle($record): string
+    {
+        return $record->name . ' ' . $record->apellidos;
+    }
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
 
@@ -35,15 +39,11 @@ class PracticaResource extends Resource
     protected static ?string $pluralModelLabel = 'Prácticas Profesionales';
 
     protected static ?int $navigationSort = 2;
+
     public static function getNavigationGroup(): ?string
     {
         return '📁 Gestión de Trámites';
     }
-
-    // public static function getNavigationGroup(): ?string
-    // {
-    //     return 'Prácticas Profesionales';
-    // }
 
     public static function form(Schema $schema): Schema
     {
@@ -54,17 +54,16 @@ class PracticaResource extends Resource
     {
         $table = PracticasTable::configure($table);
 
-        // ✅ QUERY BASE: TODOS LOS USUARIOS CON SU RELACIÓN A PRÁCTICAS
         $table->query(
             User::query()
                 ->with('practicas')
                 ->with('periodos')
         );
 
-        // ✅ FILTRO SUPERIOR POR PERIODO
+        // ✅ HEADER ACTIONS (FILTRO + CREAR PERIODO)
         $table->headerActions([
             Action::make('filtrar_periodo')
-                ->label('📅 Filtrar por Periodo')
+                ->label('Filtrar por Periodo')
                 ->icon('heroicon-o-funnel')
                 ->color('primary')
                 ->form([
@@ -88,7 +87,7 @@ class PracticaResource extends Resource
                                 })
                                 ->toArray()
                         )
-                        ->placeholder('🔍 Mostrar todos los periodos')
+                        ->placeholder('Mostrar todos los periodos')
                         ->default(request()->get('periodo_id') ?? session('periodo_id_practicas', null))
                         ->searchable()
                         ->native(false),
@@ -120,7 +119,8 @@ class PracticaResource extends Resource
                 ->modalWidth('md')
                 ->extraModalFooterActions([
                     Action::make('reset_filtro')
-                        ->label('🔄 Resetear filtro')
+                        ->label('Resetear filtro')
+                        ->icon('heroicon-o-arrow-path')
                         ->color('danger')
                         ->action(function () {
                             session()->forget('periodo_id_practicas');
@@ -132,19 +132,17 @@ class PracticaResource extends Resource
                             return redirect()->route('filament.admin.resources.practicas.index');
                         }),
                 ]),
-                
+
             Action::make('crear_periodo')
-                ->label('➕ Crear periodo')
+                ->label('Crear periodo')
                 ->icon('heroicon-o-plus-circle')
                 ->color('success')
                 ->url('/admin/periodos/create')
                 ->openUrlInNewTab(false),
         ]);
 
-        // ✅ ELIMINAR FILTROS DE LA TABLA
         $table->filters([]);
 
-        // ✅ INDICADOR DE FILTRO ACTIVO
         $periodoId = session('periodo_id_practicas', request()->get('periodo_id'));
         
         if ($periodoId) {
@@ -174,7 +172,7 @@ class PracticaResource extends Resource
     {
         return [
             'index' => ListPracticas::route('/'),
-            'create' => CreatePractica::route('/create'),
+            // 'create' => CreatePractica::route('/create'),
             'edit' => EditPractica::route('/{record}/edit'),
             'view' => ViewPractica::route('/{record}'),
         ];

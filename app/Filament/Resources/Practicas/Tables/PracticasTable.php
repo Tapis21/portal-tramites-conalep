@@ -20,60 +20,51 @@ class PracticasTable
         return $table
             ->query(
                 User::query()
+                    ->where(function ($query) {
+                        $query->whereHas('periodos', function ($q) {
+                            $q->where('activo', true);
+                        })->orWhereDoesntHave('periodos');
+                    })
                     ->with('practicas')
                     ->with('periodos')
+                    ->with('servicioSocial')
             )
             ->columns([
-                // ✅ DATOS DEL ESTUDIANTE
                 TextColumn::make('name')
                     ->label('Estudiante')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(fn ($record) => $record->name . ' ' . $record->apellidos),
+                    ->formatStateUsing(fn ($record) => $record->name . ' ' . $record->apellidos)
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ])
+                    ->tooltip(fn ($record) => !$record->periodos()->exists()
+                        ? '⚠️ Este usuario no tiene periodo asignado'
+                        : ''
+                    ),
 
                 TextColumn::make('matricula')
                     ->label('Matrícula')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
 
                 TextColumn::make('grupo')
                     ->label('Grupo')
                     ->searchable()
-                    ->sortable(),
-
-                // ✅ DATOS DE PRÁCTICAS (si existe)
-                TextColumn::make('practicas.empresa.nombre')
-                    ->label('Empresa')
-                    ->searchable()
                     ->sortable()
-                    ->placeholder('—'),
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
 
-                TextColumn::make('practicas.fecha_inicio')
-                    ->label('Inicio')
-                    ->date('d/m/Y')
-                    ->sortable()
-                    ->placeholder('—'),
-
-                TextColumn::make('practicas.fecha_limite_final')
-                    ->label('Finaliza')
-                    ->date('d/m/Y')
-                    ->sortable()
-                    ->placeholder('—')
-                    ->color(fn ($record) => $record->practicas ? self::getDaysColor($record->practicas) : 'gray'),
-
-                TextColumn::make('dias_restantes')
-                    ->label('Días')
-                    ->state(fn ($record) => $record->practicas ? Carbon::now()->diffInDays($record->practicas->fecha_limite_final) : null)
-                    ->badge()
-                    ->color(fn ($state) => match (true) {
-                        $state === null => 'gray',
-                        $state <= 7 => 'danger',
-                        $state <= 15 => 'warning',
-                        default => 'success',
-                    })
-                    ->formatStateUsing(fn ($state) => $state !== null ? number_format($state, 2) . ' días' : '—'),
-
-                // ✅ ESTATUS DE PRÁCTICAS
                 BadgeColumn::make('estatus_practicas')
                     ->label('Estatus')
                     ->colors([
@@ -94,117 +85,255 @@ class PracticasTable
                             };
                         }
                         return '📋 No solicitado';
-                    }),
+                    })
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
+
+                TextColumn::make('practicas.empresa.nombre')
+                    ->label('Empresa')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('—')
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
+
+                TextColumn::make('practicas.fecha_inicio')
+                    ->label('Inicio')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->placeholder('—')
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
+
+                TextColumn::make('practicas.fecha_limite_final')
+                    ->label('Finaliza')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->placeholder('—')
+                    ->color(fn ($record) => $record->practicas ? self::getDaysColor($record->practicas) : 'gray')
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
+
+                TextColumn::make('dias_restantes')
+                    ->label('Días')
+                    ->state(fn ($record) => $record->practicas ? Carbon::now()->diffInDays($record->practicas->fecha_limite_final) : null)
+                    ->badge()
+                    ->color(fn ($state) => match (true) {
+                        $state === null => 'gray',
+                        $state <= 7 => 'danger',
+                        $state <= 15 => 'warning',
+                        default => 'success',
+                    })
+                    ->formatStateUsing(fn ($state) => $state !== null ? number_format($state, 2) . ' días' : '—')
+                    ->extraAttributes(fn ($record) => [
+                        'style' => !$record->periodos()->exists()
+                            ? 'background-color: #fef9c3;'
+                            : '',
+                    ]),
             ])
             ->actions([
-                // ✅ ACCIÓN: SOLICITAR PRÁCTICAS (solo si no tiene)
                 Action::make('solicitar_practicas')
                     ->label('Solicitar PP')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
-                    ->visible(fn ($record) => !$record->practicas)
+                    ->visible(function ($record) {
+                        if ($record->practicas) {
+                            return false;
+                        }
+
+                        $ss = $record->servicioSocial;
+                        if (!$ss || $ss->estatus !== 'liberado') {
+                            return false;
+                        }
+
+                        return true;
+                    })
+                    ->tooltip(function ($record) {
+                        $ss = $record->servicioSocial;
+                        if (!$ss) {
+                            return '⚠️ El estudiante no ha solicitado Servicio Social. Debe liberarlo primero.';
+                        }
+                        if ($ss->estatus !== 'liberado') {
+                            $estatusLabel = match ($ss->estatus) {
+                                'en_progreso' => 'En progreso',
+                                'pendiente' => 'Pendiente',
+                                'no_solicitado' => 'No solicitado',
+                                default => $ss->estatus,
+                            };
+                            return '⚠️ El estudiante debe liberar su Servicio Social primero. Estatus actual: ' . $estatusLabel;
+                        }
+                        return null;
+                    })
+                    ->modalHeading('Solicitar Prácticas Profesionales')
+                    ->modalDescription('Completa los datos para crear la solicitud de Prácticas')
+                    ->modalSubmitActionLabel('Crear solicitud')
+                    ->modalCancelActionLabel('Cancelar')
+                    ->modalWidth('4xl')
                     ->form([
                         Select::make('empresa_id')
-                            ->label('Empresa')
+                            ->label('Institución / Empresa')
                             ->options(
                                 \App\Models\Empresa::where('activo', true)
                                     ->where('practicas', true)
+                                    ->orderBy('nombre')
                                     ->pluck('nombre', 'id')
                                     ->toArray()
                             )
                             ->required()
+                            ->placeholder('— SELECCIONA UNA EMPRESA —')
                             ->searchable()
-                            ->helperText('Selecciona la empresa donde realizará las Prácticas Profesionales'),
-
-                        DatePicker::make('fecha_inicio')
-                            ->label('Fecha de inicio')
-                            ->required()
-                            ->default(now())
-                            ->helperText('Fecha en que inician las Prácticas'),
-
-                        DatePicker::make('fecha_limite_parcial')
-                            ->label('Límite primer informe')
-                            ->required()
-                            ->default(now()->addMonths(3))
-                            ->helperText('Fecha límite para entregar el primer informe'),
-
-                        DatePicker::make('fecha_limite_final')
-                            ->label('Límite segundo informe')
-                            ->required()
-                            ->default(now()->addMonths(6))
-                            ->helperText('Fecha límite para entregar el segundo informe'),
-
-                        Select::make('grado_academico_id')
-                            ->label('Grado académico (Carta)')
-                            ->options(
-                                \App\Models\GradoAcademico::where('activo', true)
-                                    ->pluck('nombre', 'id')
-                                    ->toArray()
-                            )
-                            ->required()
-                            ->placeholder('Selecciona un grado'),
-
-                        Select::make('grado_academico_jefe_id')
-                            ->label('Grado académico (Jefe)')
-                            ->options(
-                                \App\Models\GradoAcademico::where('activo', true)
-                                    ->pluck('nombre', 'id')
-                                    ->toArray()
-                            )
-                            ->required()
-                            ->placeholder('Selecciona un grado'),
+                            ->helperText('Selecciona la empresa, institución u organismo donde realizará las Prácticas Profesionales'),
 
                         Select::make('horario_id')
-                            ->label('Horario')
-                            ->options(
-                                \App\Models\Horario::with('turno')
+                            ->label('Horario de prácticas')
+                            ->options(function ($get, $record) {
+                                $user = $record;
+                                $turnoId = $user->turno_id ?? null;
+                                
+                                if (!$turnoId) {
+                                    return \App\Models\Horario::with('turno')
+                                        ->get()
+                                        ->mapWithKeys(function ($horario) {
+                                            $turno = $horario->turno ? $horario->turno->nombre : 'Sin turno';
+                                            return [$horario->id => $turno . ' ' . $horario->hora_inicio . ' - ' . $horario->hora_fin];
+                                        })
+                                        ->toArray();
+                                }
+                                
+                                return \App\Models\Horario::with('turno')
+                                    ->where('turno_id', $turnoId)
                                     ->get()
                                     ->mapWithKeys(function ($horario) {
                                         $turno = $horario->turno ? $horario->turno->nombre : 'Sin turno';
                                         return [$horario->id => $turno . ' ' . $horario->hora_inicio . ' - ' . $horario->hora_fin];
                                     })
+                                    ->toArray();
+                            })
+                            ->required()
+                            ->placeholder('— SELECCIONA UN HORARIO —')
+                            ->helperText('Selecciona el horario en que realizará las Prácticas (según tu turno)'),
+
+                        DatePicker::make('fecha_inicio')
+                            ->label('Fecha de inicio')
+                            ->required()
+                            ->default(now())
+                            ->helperText('Fecha en que dan inicio las Prácticas Profesionales')
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, $set, $get) {
+                                if ($state) {
+                                    $fechaFinal = Carbon::parse($state)->addMonths(4);
+                                    $fechaFinalActual = $get('fecha_finalizacion');
+                                    if (!$fechaFinalActual || Carbon::parse($fechaFinalActual)->lt($fechaFinal)) {
+                                        $set('fecha_finalizacion', $fechaFinal->format('Y-m-d'));
+                                    }
+                                }
+                            }),
+
+                        DatePicker::make('fecha_finalizacion')
+                            ->label('Fecha de finalización')
+                            ->required()
+                            ->helperText('Fecha en que finalizan las Prácticas Profesionales (mínimo 4 meses después del inicio)')
+                            ->minDate(function ($get) {
+                                $inicio = $get('fecha_inicio');
+                                if ($inicio) {
+                                    return Carbon::parse($inicio)->addMonths(4);
+                                }
+                                return now()->addMonths(4);
+                            })
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, $set, $get) {
+                                $inicio = $get('fecha_inicio');
+                                if ($inicio && $state) {
+                                    $fechaMinima = Carbon::parse($inicio)->addMonths(4);
+                                    if (Carbon::parse($state)->lt($fechaMinima)) {
+                                        $set('fecha_finalizacion', $fechaMinima->format('Y-m-d'));
+                                    }
+                                }
+                            }),
+
+                        Select::make('grado_academico_id')
+                            ->label('Grado académico (Carta de presentación)')
+                            ->options(
+                                \App\Models\GradoAcademico::where('activo', true)
+                                    ->orderBy('nombre')
+                                    ->pluck('nombre', 'id')
                                     ->toArray()
                             )
                             ->required()
-                            ->placeholder('Selecciona un horario'),
+                            ->placeholder('— SELECCIONA UN GRADO —')
+                            ->helperText('Grado académico de la persona que firmará la carta de presentación (Ej: Lic., Ing., Dr.)'),
 
                         TextInput::make('nombre_persona_carta')
-                            ->label('Nombre de la persona (Carta)')
+                            ->label('Nombre completo (Carta de presentación)')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->placeholder('Ej: Lic. Juan Carlos Pérez Ramírez')
+                            ->helperText('Nombre completo de la persona que firmará la carta de presentación'),
 
                         TextInput::make('cargo_persona_carta')
-                            ->label('Cargo de la persona (Carta)')
+                            ->label('Cargo / Puesto (Carta de presentación)')
                             ->required()
-                            ->maxLength(255),
-
-                        TextInput::make('nombre_jefe_inmediato')
-                            ->label('Nombre del jefe inmediato')
-                            ->required()
-                            ->maxLength(255),
-
-                        TextInput::make('cargo_jefe_inmediato')
-                            ->label('Cargo del jefe inmediato')
-                            ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->placeholder('Ej: Director de Recursos Humanos')
+                            ->helperText('Cargo o puesto que ocupa la persona que firmará la carta de presentación'),
 
                         TextInput::make('area_asignada')
-                            ->label('Área asignada')
+                            ->label('Área / Departamento asignado')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->placeholder('Ej: Departamento de Sistemas')
+                            ->helperText('Área, departamento o división donde realizará las Prácticas'),
+
+                        Select::make('grado_academico_jefe_id')
+                            ->label('Grado académico (Jefe inmediato)')
+                            ->options(
+                                \App\Models\GradoAcademico::where('activo', true)
+                                    ->orderBy('nombre')
+                                    ->pluck('nombre', 'id')
+                                    ->toArray()
+                            )
+                            ->required()
+                            ->placeholder('— SELECCIONA UN GRADO —')
+                            ->helperText('Grado académico del jefe inmediato del estudiante (Ej: Lic., Ing., Dr.)'),
+
+                        TextInput::make('nombre_jefe_inmediato')
+                            ->label('Nombre completo (Jefe inmediato)')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Ej: Ing. María Elena González Torres')
+                            ->helperText('Nombre completo del jefe inmediato del estudiante'),
+
+                        TextInput::make('cargo_jefe_inmediato')
+                            ->label('Cargo / Puesto (Jefe inmediato)')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Ej: Subdirector de Operaciones')
+                            ->helperText('Cargo o puesto que ocupa el jefe inmediato del estudiante'),
 
                         TextInput::make('apoyo_estudiante')
                             ->label('Apoyo al estudiante')
                             ->maxLength(255)
-                            ->helperText('Ej: Equipo de cómputo, material, etc.'),
+                            ->placeholder('Ej: Económico, equipo de cómputo, material, transporte')
+                            ->helperText('Describe el apoyo que recibirá el estudiante durante las Prácticas (opcional)'),
                     ])
                     ->action(function (array $data, $record) {
                         $practica = \App\Models\Practica::create([
                             'user_id' => $record->id,
                             'empresa_id' => $data['empresa_id'],
                             'fecha_inicio' => $data['fecha_inicio'],
-                            'fecha_limite_parcial' => $data['fecha_limite_parcial'],
-                            'fecha_limite_final' => $data['fecha_limite_final'],
+                            'fecha_limite_final' => $data['fecha_finalizacion'], // ← Guarda en fecha_limite_final
                             'horas_requeridas' => 360,
                             'horas_completadas' => 0,
                             'grado_academico_id' => $data['grado_academico_id'],
@@ -228,27 +357,13 @@ class PracticasTable
                             ->body("Se ha creado la solicitud de Prácticas Profesionales para {$record->name}")
                             ->success()
                             ->send();
-                    })
-                    ->modalHeading('Solicitar Prácticas Profesionales')
-                    ->modalDescription('Completa los datos para crear la solicitud de Prácticas')
-                    ->modalSubmitActionLabel('Crear solicitud')
-                    ->modalCancelActionLabel('Cancelar')
-                    ->modalWidth('2xl'),
+                    }),
 
-                // ✅ ACCIÓN: VER ALUMNO
                 Action::make('ver')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->url(fn ($record) => route('filament.admin.resources.practicas.view', $record)),
-
-                // ✅ ACCIÓN: EDITAR PRÁCTICAS (solo si tiene)
-                Action::make('editar')
-                    ->label('Editar PP')
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('warning')
-                    ->visible(fn ($record) => $record->practicas)
-                    ->url(fn ($record) => route('filament.admin.resources.practicas.edit', $record->practicas)),
             ])
             ->defaultSort('name')
             ->striped()

@@ -6,7 +6,7 @@ use App\Filament\Resources\ServicioSocials\ServicioSocialResource;
 use App\Models\Documento;
 use App\Models\Comentario;
 use App\Models\ServicioSocial;
-use App\Models\User; // ✅ AGREGADO
+use App\Models\User;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -45,6 +45,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
         return $this->record->servicioSocial;
     }
 
+    public function getTitle(): string
+    {
+        $nombre = $this->record->name . ' ' . $this->record->apellidos;
+        return "Revisando a: {$nombre}";
+    }
+
     public function infolist(Schema $schema): Schema
     {
         return $schema
@@ -52,7 +58,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                 Section::make('Datos del Estudiante')
                     ->icon('heroicon-o-user-group')
                     ->schema([
-                        // ✅ CAMBIADO: usar $this->record directamente (es User)
                         TextEntry::make('name')
                             ->label('Nombre completo')
                             ->formatStateUsing(fn () => $this->record->name . ' ' . $this->record->apellidos)
@@ -78,7 +83,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: DATOS DE LA EMPRESA (solo si tiene SS)
                 Section::make('Datos de la Empresa')
                     ->icon('heroicon-o-building-office-2')
                     ->visible(fn () => $this->getServicioSocial() !== null)
@@ -94,7 +98,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(2),
 
-                // ✅ SECCIÓN: SIN SOLICITUD (solo si NO tiene SS)
                 Section::make('Sin Solicitud de Servicio Social')
                     ->icon('heroicon-o-information-circle')
                     ->visible(fn () => $this->getServicioSocial() === null)
@@ -105,7 +108,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                             ->icon('heroicon-o-exclamation-circle'),
                     ]),
 
-                // ✅ SECCIÓN: FECHAS Y HORAS (solo si tiene SS)
                 Section::make('Fechas y Horas')
                     ->icon('heroicon-o-calendar-days')
                     ->visible(fn () => $this->getServicioSocial() !== null)
@@ -140,7 +142,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: DATOS DE CONTACTO (solo si tiene SS)
                 Section::make('Datos de Contacto')
                     ->icon('heroicon-o-phone')
                     ->visible(fn () => $this->getServicioSocial() !== null)
@@ -172,7 +173,6 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
-                // ✅ SECCIÓN: INFORMACIÓN ADICIONAL (solo si tiene SS)
                 Section::make('Información Adicional')
                     ->icon('heroicon-o-information-circle')
                     ->visible(fn () => $this->getServicioSocial() !== null)
@@ -426,7 +426,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
         return $table
             ->query(
                 Documento::query()
-                    ->where('user_id', $this->record->id) // ✅ CAMBIADO: user_id → id
+                    ->where('user_id', $this->record->id)
                     ->where('activo', true)
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
                     ->with(['tipoDocumento', 'comentarios.user'])
@@ -587,8 +587,8 @@ class ViewServicioSocial extends ViewRecord implements HasTable
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
-        ];
+        $servicioSocial = $this->getServicioSocial();
+
+        return [];
     }
 }
