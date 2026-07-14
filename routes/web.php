@@ -115,6 +115,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/practicas/{id}/validar-ventanilla-reporte-final', [PracticaController::class, 'validarVentanillaReporteFinal'])->name('admin.practicas.validar-ventanilla-reporte-final');
     Route::post('/admin/practicas/{id}/rechazar-reporte-final', [PracticaController::class, 'rechazarReporteFinal'])->name('admin.practicas.rechazar-reporte-final');
 
+    // ==================== RUTA PARA ACTUALIZAR CONTRASEÑA ====================
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
     // ==================== RUTA PARA ACTUALIZAR ESTATUS DE DOCUMENTOS ====================
     Route::post('/admin/documentos/update-status', [DocumentoStatusController::class, 'update'])
         ->name('filament.admin.resources.servicio-socials.update-document-status')

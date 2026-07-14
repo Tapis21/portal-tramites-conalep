@@ -16,10 +16,17 @@
                 <span class="iconify w-4 h-4" data-icon="mdi:account"></span>
                 Bienvenido, <strong>{{ Auth::user()->name }} {{ Auth::user()->apellidos }}</strong>
                 <span class="text-gray-400 mx-1">•</span>
-                <span class="inline-flex items-center gap-1 text-green-700">
-                    <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
-                    Estudiante activo
-                </span>
+                @if($estudianteActivo)
+                    <span class="inline-flex items-center gap-1 text-green-700">
+                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:check-circle"></span>
+                        Estudiante activo
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1 text-amber-600">
+                        <span class="iconify w-3.5 h-3.5" data-icon="mdi:alert-circle"></span>
+                        Sin periodo activo
+                    </span>
+                @endif
             </p>
         </div>
         <div class="mt-3 sm:mt-0">
@@ -59,20 +66,24 @@
                 <div class="flex flex-col sm:flex-row items-center gap-6">
                     <div class="relative flex-shrink-0">
                         @php
-                            $progreso = min($progresoSS ?? 0, 100);
+                            $progresoSS = min($progresoSS ?? 0, 100);
                             $circunferencia = 2 * pi() * 45;
-                            $offset = $circunferencia - ($progreso / 100) * $circunferencia;
+                            $offset = $circunferencia - ($progresoSS / 100) * $circunferencia;
                         @endphp
                         <svg class="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
-                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                            <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="8" fill="none"
-                                    stroke-dasharray="{{ $circunferencia }}"
-                                    stroke-dashoffset="{{ $offset }}"
-                                    stroke-linecap="round"
-                                    class="transition-all duration-1000 ease-out"/>
+                            <!-- Fondo gris -->
+                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="7" fill="none"/>
+                            <!-- Progreso verde (solo si > 0) -->
+                            @if($progresoSS > 0)
+                                <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="7" fill="none"
+                                        stroke-dasharray="{{ $circunferencia }}"
+                                        stroke-dashoffset="{{ $offset }}"
+                                        stroke-linecap="butt"
+                                        class="transition-all duration-1000 ease-out"/>
+                            @endif
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-2xl font-bold text-gray-900">{{ $progreso }}%</span>
+                            <span class="text-2xl font-bold text-gray-900">{{ $progresoSS }}%</span>
                             <span class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Progreso</span>
                         </div>
                     </div>
@@ -93,9 +104,6 @@
                             </span>
                         </div>
                         <div class="flex items-center gap-2 pt-1">
-                            @php
-                                $estatusSS = $estatusSS ?? 'No solicitado';
-                            @endphp
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
                                 @if($estatusSS == 'Liberado') bg-green-100 text-green-800
                                 @elseif($estatusSS == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
@@ -141,20 +149,22 @@
                 <div class="flex flex-col sm:flex-row items-center gap-6">
                     <div class="relative flex-shrink-0">
                         @php
-                            $progreso = min($progresoPP ?? 0, 100);
+                            $progresoPP = min($progresoPP ?? 0, 100);
                             $circunferencia = 2 * pi() * 45;
-                            $offset = $circunferencia - ($progreso / 100) * $circunferencia;
+                            $offset = $circunferencia - ($progresoPP / 100) * $circunferencia;
                         @endphp
                         <svg class="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
-                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                            <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="8" fill="none"
-                                    stroke-dasharray="{{ $circunferencia }}"
-                                    stroke-dashoffset="{{ $offset }}"
-                                    stroke-linecap="round"
-                                    class="transition-all duration-1000 ease-out"/>
+                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="7" fill="none"/>
+                            @if($progresoPP > 0)
+                                <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="7" fill="none"
+                                        stroke-dasharray="{{ $circunferencia }}"
+                                        stroke-dashoffset="{{ $offset }}"
+                                        stroke-linecap="butt"
+                                        class="transition-all duration-1000 ease-out"/>
+                            @endif
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-2xl font-bold text-gray-900">{{ $progreso }}%</span>
+                            <span class="text-2xl font-bold text-gray-900">{{ $progresoPP }}%</span>
                             <span class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Progreso</span>
                         </div>
                     </div>
@@ -175,9 +185,6 @@
                             </span>
                         </div>
                         <div class="flex items-center gap-2 pt-1">
-                            @php
-                                $estatusPP = $estatusPP ?? 'No solicitado';
-                            @endphp
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
                                 @if($estatusPP == 'Liberado') bg-green-100 text-green-800
                                 @elseif($estatusPP == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
@@ -201,7 +208,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- ANUNCIOS IMPORTANTES - MEJORADO -->
+    <!-- ANUNCIOS IMPORTANTES -->
     <!-- ========================================== -->
     <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden">
         <div class="p-6">
@@ -210,9 +217,12 @@
                 <div class="flex items-center gap-2">
                     <span class="iconify w-6 h-6 text-green-700" data-icon="mdi:bullhorn"></span>
                     <h3 class="text-lg font-semibold text-gray-900">Anuncios importantes</h3>
-                    @if($anuncios->count() > 0)
-                        <span class="text-xs bg-green-700 text-white px-2.5 py-0.5 rounded-full font-medium">
-                            {{ $anuncios->count() }} {{ $anuncios->count() == 1 ? 'nuevo' : 'nuevos' }}
+                    @php
+                        $anunciosNuevos = $anuncios->filter(fn($a) => !$a->vistoPor(Auth::user()))->count();
+                    @endphp
+                    @if($anunciosNuevos > 0)
+                        <span class="text-xs bg-green-700 text-white px-2.5 py-0.5 rounded-full font-medium animate-pulse">
+                            {{ $anunciosNuevos }} {{ $anunciosNuevos == 1 ? 'nuevo' : 'nuevos' }}
                         </span>
                     @endif
                 </div>
@@ -223,11 +233,18 @@
             </div>
 
             @forelse($anuncios as $anuncio)
+                @php
+                    $visto = $anuncio->vistoPor(Auth::user());
+                @endphp
                 <div class="border-b border-gray-200/60 last:border-0 py-4 hover:bg-white/50 rounded-lg px-4 -mx-4 transition">
                     <div class="flex justify-between items-start gap-4">
                         <div class="flex-1">
                             <div class="flex items-start gap-3">
-                                <span class="iconify w-4 h-4 text-green-600 flex-shrink-0 mt-1" data-icon="mdi:message-text"></span>
+                                @if(!$visto)
+                                    <span class="iconify w-2 h-2 text-green-600 flex-shrink-0 mt-2" data-icon="mdi:circle"></span>
+                                @else
+                                    <span class="iconify w-4 h-4 text-gray-400 flex-shrink-0 mt-1" data-icon="mdi:check-circle"></span>
+                                @endif
                                 <div>
                                     <p class="text-sm sm:text-base text-gray-700 leading-relaxed">{{ $anuncio->contenido }}</p>
                                     <div class="flex flex-wrap items-center gap-3 mt-2">
@@ -245,6 +262,11 @@
                                             <span class="iconify w-3 h-3" data-icon="mdi:calendar"></span>
                                             {{ $anuncio->created_at->locale('es')->isoFormat('D [de] MMMM [del] YYYY') }}
                                         </span>
+                                        @if(!$visto)
+                                            <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                                Nuevo
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -262,7 +284,6 @@
                 </div>
             @endforelse
 
-            <!-- Pie de anuncios -->
             @if($anuncios->count() > 0)
                 <div class="mt-4 pt-3 border-t border-gray-200/60 text-center">
                     <p class="text-[10px] text-gray-400">

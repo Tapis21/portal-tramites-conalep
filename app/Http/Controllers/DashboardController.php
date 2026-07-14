@@ -2,99 +2,102 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Anuncio;
 use App\Models\ServicioSocial;
 use App\Models\Practica;
-use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
-        
-        // ========================================== //
-        // SERVICIO SOCIAL
-        // ========================================== //
+
+        // 🔹 Anuncios - marcar como vistos automáticamente
+        $anuncios = Anuncio::with('admin')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Marcar todos los anuncios como vistos para este usuario
+        foreach ($anuncios as $anuncio) {
+            if (!$anuncio->vistoPor($user)) {
+                $anuncio->marcarComoVisto($user);
+            }
+        }
+
+        // 🔹 Servicio Social
         $servicioSocial = $user->servicioSocial;
-        $progresoSS = 0;
-        $estatusSS = 'No solicitado';
-        
-        if ($servicioSocial && $servicioSocial->fecha_inicio) {
-            $estatusSS = $this->traducirEstatus($servicioSocial->estatus);
-            
-            if ($servicioSocial->fecha_limite_segundo_informe) {
-                $hoy = now();
-                $inicio = \Carbon\Carbon::parse($servicioSocial->fecha_inicio);
-                $fin = \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe);
-                if ($hoy->gte($fin)) {
-                    $progresoSS = 100;
-                } elseif ($hoy->lte($inicio)) {
-                    $progresoSS = 0;
-                } else {
-                    $totalDias = $inicio->diffInDays($fin);
-                    $diasTranscurridos = $inicio->diffInDays($hoy);
-                    $progresoSS = round(($diasTranscurridos / $totalDias) * 100);
-                }
-            }
-        }
-        
-        // ========================================== //
-        // PRÁCTICAS PROFESIONALES (CORREGIDO)
-        // ========================================== //
-        // . USAR $user->practicas (COINCIDENTE CON EL MODELO)
-        $practica = $user->practicas; // Esto es hasOne, devuelve un solo objeto
-        $progresoPP = 0;
-        $estatusPP = 'No solicitado';
-        
-        if ($practica && $practica->fecha_inicio) {
-            $estatusPP = $this->traducirEstatus($practica->estatus);
-            
-            if ($practica->fecha_limite_final) {
-                $hoy = now();
-                $inicio = \Carbon\Carbon::parse($practica->fecha_inicio);
-                $fin = \Carbon\Carbon::parse($practica->fecha_limite_final);
-                if ($hoy->gte($fin)) {
-                    $progresoPP = 100;
-                } elseif ($hoy->lte($inicio)) {
-                    $progresoPP = 0;
-                } else {
-                    $totalDias = $inicio->diffInDays($fin);
-                    $diasTranscurridos = $inicio->diffInDays($hoy);
-                    $progresoPP = round(($diasTranscurridos / $totalDias) * 100);
-                }
-            }
-        }
-        
-        // ========================================== //
-        // ANUNCIOS
-        // ========================================== //
-        $anuncios = Anuncio::orderBy('created_at', 'desc')->get();
-        
+        $estatusSS = $servicioSocial ? $this->getEstatusLabel($servicioSocial->estatus) : 'No solicitado';
+        $progresoSS = $this->calcularProgreso($servicioSocial, 'servicio_social');
+
+        // 🔹 Prácticas
+        $practica = $user->practicas;
+        $estatusPP = $practica ? $this->getEstatusLabel($practica->estatus) : 'No solicitado';
+        $progresoPP = $this->calcularProgreso($practica, 'practicas');
+
+        // 🔹 Estudiante activo (basado en periodos)
+        $periodoActual = $user->periodoActual();
+        $estudianteActivo = $periodoActual ? true : false;
+
         return view('dashboard', compact(
-            'progresoSS', 
-            'estatusSS', 
-            'progresoPP', 
-            'estatusPP', 
             'anuncios',
             'servicioSocial',
-            'practica'
+            'estatusSS',
+            'progresoSS',
+            'practica',
+            'estatusPP',
+            'progresoPP',
+            'estudianteActivo'
         ));
     }
-    
-    /**
-     * Traducir el estatus de la base de datos a formato legible
-     */
-    private function traducirEstatus($estatus)
+
+    private function getEstatusLabel($estatus)
     {
-        $mapa = [
-            'no_solicitado' => 'No solicitado',
-            'pendiente' => 'Pendiente',
-            'en_progreso' => 'En progreso',
-            'pendiente_revision' => 'Pendiente de revisión',
+        return match ($estatus) {
             'liberado' => 'Liberado',
-        ];
-        
-        return $mapa[$estatus] ?? ucfirst($estatus);
+            'pendiente_revision' => 'Pendiente de revisión',
+            'en_progreso' => 'En progreso',
+            'pendiente' => 'Pendiente',
+            default => 'No solicitado',
+        };
+    }
+
+    private function calcularProgreso($tramite, $tipo)
+    {
+        if (!$tramite || !$tramite->fecha_inicio) {
+            return 0;
+        }
+
+        $fechaInicio = \Carbon\Carbon::parse($tramite->fecha_inicio);
+
+        // Determinar fecha límite según el tipo
+        if ($tipo === 'servicio_social') {
+            $fechaLimite = $tramite->fecha_limite_segundo_informe 
+                ? \Carbon\Carbon::parse($tramite->fecha_limite_segundo_informe) 
+                : null;
+        } else { // practicas
+            $fechaLimite = $tramite->fecha_limite_final 
+                ? \Carbon\Carbon::parse($tramite->fecha_limite_final) 
+                : null;
+        }
+
+        if (!$fechaLimite) {
+            return 0;
+        }
+
+        $diasTotales = $fechaInicio->diffInDays($fechaLimite);
+        if ($diasTotales <= 0) {
+            return 0;
+        }
+
+        $diasTranscurridos = $fechaInicio->diffInDays(now());
+
+        // Si ya pasó la fecha límite, el progreso es 100%
+        if ($diasTranscurridos >= $diasTotales) {
+            return 100;
+        }
+
+        return round(($diasTranscurridos / $diasTotales) * 100);
     }
 }

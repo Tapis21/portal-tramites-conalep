@@ -116,4 +116,24 @@ class User extends Authenticatable
                     ->withPivot('estatus')
                     ->first();
     }
+
+    // Relación con anuncios (vistos)
+    public function anuncios()
+    {
+        return $this->belongsToMany(Anuncio::class, 'anuncio_user')
+                    ->withPivot('visto', 'visto_at')
+                    ->withTimestamps();
+    }
+
+    // Obtener anuncios no vistos
+    public function anunciosNoVistos()
+    {
+        return $this->anuncios()->wherePivot('visto', false);
+    }
+
+    // Obtener el conteo de anuncios no vistos
+    public function countAnunciosNoVistos(): int
+    {
+        return $this->anuncios()->wherePivot('visto', false)->count();
+    }
 }
