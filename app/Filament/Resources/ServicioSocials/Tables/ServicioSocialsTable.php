@@ -10,7 +10,9 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 
 class ServicioSocialsTable
@@ -118,24 +120,60 @@ class ServicioSocialsTable
                     ->date('d/m/Y')
                     ->sortable()
                     ->placeholder('—')
-                    ->color(fn ($record) => $record->servicioSocial ? self::getDaysColor($record->servicioSocial) : 'gray')
+                    ->color(function ($record) {
+                        if (!$record->servicioSocial) {
+                            return 'gray';
+                        }
+                        $dias = Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe);
+                        if ($dias <= 7) {
+                            return 'danger';
+                        }
+                        if ($dias <= 15) {
+                            return 'warning';
+                        }
+                        return 'success';
+                    })
                     ->extraAttributes(fn ($record) => [
                         'style' => !$record->periodos()->exists()
                             ? 'background-color: #fef9c3;'
                             : '',
                     ]),
 
-                TextColumn::make('dias_restantes')
-                    ->label('Días')
-                    ->state(fn ($record) => $record->servicioSocial ? Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe) : null)
-                    ->badge()
-                    ->color(fn ($state) => match (true) {
-                        $state === null => 'gray',
-                        $state <= 7 => 'danger',
-                        $state <= 15 => 'warning',
-                        default => 'success',
+                TextColumn::make('tiempo')
+                    ->label('Tiempo')
+                    ->state(function ($record) {
+                        if (!$record->servicioSocial) {
+                            return '—';
+                        }
+                        
+                        if ($record->servicioSocial->estatus === 'liberado') {
+                            return '✅ Finalizado';
+                        }
+                        
+                        $dias = Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe, false);
+                        return intval($dias) . ' días';
                     })
-                    ->formatStateUsing(fn ($state) => $state !== null ? number_format($state, 2) . ' días' : '—')
+                    ->badge()
+                    ->color(function ($state, $record) {
+                        if ($state === '—') {
+                            return 'gray';
+                        }
+                        if ($state === '✅ Finalizado') {
+                            return 'success';
+                        }
+                        
+                        $dias = intval(preg_replace('/[^0-9-]/', '', $state));
+                        
+                        if ($dias <= 7 && $dias >= 0) {
+                            return 'danger';
+                        } elseif ($dias <= 15 && $dias >= 0) {
+                            return 'warning';
+                        } elseif ($dias < 0) {
+                            return 'danger';
+                        } else {
+                            return 'success';
+                        }
+                    })
                     ->extraAttributes(fn ($record) => [
                         'style' => !$record->periodos()->exists()
                             ? 'background-color: #fef9c3;'
@@ -174,22 +212,15 @@ class ServicioSocialsTable
                                 $user = $record;
                                 $turnoId = $user->turno_id ?? null;
                                 
-                                if (!$turnoId) {
-                                    return \App\Models\Horario::with('turno')
-                                        ->get()
-                                        ->mapWithKeys(function ($horario) {
-                                            $turno = $horario->turno ? $horario->turno->nombre : 'Sin turno';
-                                            return [$horario->id => $turno . ' ' . $horario->hora_inicio . ' - ' . $horario->hora_fin];
-                                        })
-                                        ->toArray();
+                                $horarios = \App\Models\Horario::with('turno');
+                                
+                                if ($turnoId) {
+                                    $horarios->where('turno_id', $turnoId);
                                 }
                                 
-                                return \App\Models\Horario::with('turno')
-                                    ->where('turno_id', $turnoId)
-                                    ->get()
+                                return $horarios->get()
                                     ->mapWithKeys(function ($horario) {
-                                        $turno = $horario->turno ? $horario->turno->nombre : 'Sin turno';
-                                        return [$horario->id => $turno . ' ' . $horario->hora_inicio . ' - ' . $horario->hora_fin];
+                                        return [$horario->id => $horario->hora_inicio . ' - ' . $horario->hora_fin];
                                     })
                                     ->toArray();
                             })
@@ -201,39 +232,38 @@ class ServicioSocialsTable
                             ->label('Fecha de inicio')
                             ->required()
                             ->default(now())
-                            ->helperText('Fecha en que da inicio el Servicio Social')
+                            ->helperText('Selecciona la fecha de inicio. Si es sábado se ajusta a viernes, si es domingo a lunes.')
                             ->reactive()
                             ->afterStateUpdated(function ($state, $set, $get) {
                                 if ($state) {
-                                    $fechaFinal = Carbon::parse($state)->addMonths(6);
-                                    $fechaFinalActual = $get('fecha_finalizacion');
-                                    if (!$fechaFinalActual || Carbon::parse($fechaFinalActual)->lt($fechaFinal)) {
-                                        $set('fecha_finalizacion', $fechaFinal->format('Y-m-d'));
-                                    }
+                                    $fechaInicio = Carbon::parse($state);
+                                    $fechaInicio = self::ajustarInicio($fechaInicio);
+                                    $set('fecha_inicio', $fechaInicio->format('Y-m-d'));
+                                    
+                                    $fechaTerminacion = $fechaInicio->copy()->addMonths(6);
+                                    $fechaTerminacion = self::ajustarFinDeSemana($fechaTerminacion);
+                                    
+                                    $set('fecha_terminacion', $fechaTerminacion->format('Y-m-d'));
+                                    self::calcularPrimerInforme($fechaInicio, $fechaTerminacion, $set);
                                 }
                             }),
 
-                        DatePicker::make('fecha_finalizacion')
-                            ->label('Fecha de finalización')
+                        DatePicker::make('fecha_terminacion')
+                            ->label('Fecha de terminación')
                             ->required()
-                            ->helperText('Fecha en que finaliza el Servicio Social (mínimo 6 meses después del inicio)')
-                            ->minDate(function ($get) {
-                                $inicio = $get('fecha_inicio');
-                                if ($inicio) {
-                                    return Carbon::parse($inicio)->addMonths(6);
-                                }
-                                return now()->addMonths(6);
-                            })
+                            ->helperText('Fecha en que finaliza el Servicio Social (Se ajusta automáticamente si cae en fin de semana)')
                             ->reactive()
                             ->afterStateUpdated(function ($state, $set, $get) {
-                                $inicio = $get('fecha_inicio');
-                                if ($inicio && $state) {
-                                    $fechaMinima = Carbon::parse($inicio)->addMonths(6);
-                                    if (Carbon::parse($state)->lt($fechaMinima)) {
-                                        $set('fecha_finalizacion', $fechaMinima->format('Y-m-d'));
-                                    }
+                                $fechaInicio = $get('fecha_inicio');
+                                if ($fechaInicio && $state) {
+                                    $fechaTerminacion = Carbon::parse($state);
+                                    $fechaTerminacion = self::ajustarFinDeSemana($fechaTerminacion);
+                                    $set('fecha_terminacion', $fechaTerminacion->format('Y-m-d'));
+                                    self::calcularPrimerInforme($fechaInicio, $fechaTerminacion, $set);
                                 }
                             }),
+
+                        Hidden::make('fecha_limite_primer_informe'),
 
                         Select::make('grado_academico_id')
                             ->label('Grado académico (Carta de presentación)')
@@ -245,13 +275,13 @@ class ServicioSocialsTable
                             )
                             ->required()
                             ->placeholder('— SELECCIONA UN GRADO —')
-                            ->helperText('Grado académico de la persona que firmará la carta de presentación (Ej: Lic., Ing., Dr.)'),
+                            ->helperText('Grado académico de la persona que firmará la carta de presentación'),
 
                         TextInput::make('nombre_persona_carta')
                             ->label('Nombre completo (Carta de presentación)')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Ej: Lic. Juan Carlos Pérez Ramírez')
+                            ->placeholder('Ej: Juan Carlos Pérez Ramírez')
                             ->helperText('Nombre completo de la persona que firmará la carta de presentación'),
 
                         TextInput::make('cargo_persona_carta')
@@ -278,13 +308,13 @@ class ServicioSocialsTable
                             )
                             ->required()
                             ->placeholder('— SELECCIONA UN GRADO —')
-                            ->helperText('Grado académico del jefe inmediato del estudiante (Ej: Lic., Ing., Dr.)'),
+                            ->helperText('Grado académico del jefe inmediato del estudiante'),
 
                         TextInput::make('nombre_jefe_inmediato')
                             ->label('Nombre completo (Jefe inmediato)')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Ej: Ing. María Elena González Torres')
+                            ->placeholder('Ej: María Elena González Torres')
                             ->helperText('Nombre completo del jefe inmediato del estudiante'),
 
                         TextInput::make('cargo_jefe_inmediato')
@@ -305,7 +335,8 @@ class ServicioSocialsTable
                             'user_id' => $record->id,
                             'empresa_id' => $data['empresa_id'],
                             'fecha_inicio' => $data['fecha_inicio'],
-                            'fecha_limite_segundo_informe' => $data['fecha_finalizacion'], // ← Guarda en fecha_limite_segundo_informe
+                            'fecha_limite_primer_informe' => $data['fecha_limite_primer_informe'],
+                            'fecha_limite_segundo_informe' => $data['fecha_terminacion'],
                             'grado_academico_id' => $data['grado_academico_id'],
                             'grado_academico_jefe_id' => $data['grado_academico_jefe_id'],
                             'horario_id' => $data['horario_id'],
@@ -329,6 +360,54 @@ class ServicioSocialsTable
                             ->send();
                     }),
 
+                Action::make('eliminar_solicitud')
+                    ->label('Eliminar solicitud')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->visible(fn ($record) => $record->servicioSocial && in_array($record->servicioSocial->estatus, ['pendiente', 'en_progreso']))
+                    ->modalHeading('Eliminar solicitud de Servicio Social')
+                    ->modalDescription('¿Estás seguro de que deseas eliminar esta solicitud? Se eliminarán también todos los documentos y comentarios asociados. Esta acción no se puede deshacer.')
+                    ->modalSubmitActionLabel('Sí, eliminar todo')
+                    ->modalCancelActionLabel('Cancelar')
+                    ->action(function ($record) {
+                        $servicioSocial = $record->servicioSocial;
+                        $nombreEstudiante = $record->name;
+                        
+                        // 1. Obtener documentos del servicio
+                        $documentos = $servicioSocial->documentos ?? collect();
+                        
+                        // 2. Eliminar documentos y sus comentarios
+                        foreach ($documentos as $documento) {
+                            // Eliminar comentarios del documento
+                            $documento->comentarios()->delete();
+                            
+                            // Eliminar archivo físico
+                            if ($documento->archivo_pdf && Storage::exists($documento->archivo_pdf)) {
+                                Storage::delete($documento->archivo_pdf);
+                            }
+                            
+                            // Eliminar el documento
+                            $documento->delete();
+                        }
+                        
+                        // 3. Eliminar comentarios directos del servicio
+                        $servicioSocial->comentarios()->delete();
+                        
+                        // 4. Eliminar el servicio
+                        $servicioSocial->delete();
+                        
+                        // 5. Actualizar estatus del usuario
+                        $record->update([
+                            'estatus_servicio_social' => 'no_solicitado'
+                        ]);
+                        
+                        Notification::make()
+                            ->title('🗑️ Solicitud eliminada')
+                            ->body("Se ha eliminado la solicitud de Servicio Social para {$nombreEstudiante}")
+                            ->success()
+                            ->send();
+                    }),
+
                 Action::make('ver')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
@@ -341,23 +420,40 @@ class ServicioSocialsTable
             ->emptyStateHeading('No hay alumnos registrados')
             ->emptyStateDescription('Aún no hay alumnos en el sistema. Importa alumnos desde el módulo de Importación Masiva.');
     }
-    
-    protected static function getDaysColor($record): string
+
+    protected static function ajustarInicio(Carbon $fecha): Carbon
     {
-        if (!$record || !$record->fecha_limite_segundo_informe) {
-            return 'gray';
+        $diaSemana = $fecha->dayOfWeek;
+        if ($diaSemana === 6) {
+            return $fecha->subDays(1);
+        } elseif ($diaSemana === 0) {
+            return $fecha->addDays(1);
         }
-        
-        $dias = Carbon::now()->diffInDays($record->fecha_limite_segundo_informe);
-        
-        if ($dias <= 7) {
-            return 'danger';
+        return $fecha;
+    }
+
+    protected static function ajustarFinDeSemana(Carbon $fecha): Carbon
+    {
+        $diaSemana = $fecha->dayOfWeek;
+        if ($diaSemana === 6) {
+            return $fecha->addDays(2);
+        } elseif ($diaSemana === 0) {
+            return $fecha->addDays(1);
         }
+        return $fecha;
+    }
+
+    protected static function calcularPrimerInforme($fechaInicio, $fechaTerminacion, $set): void
+    {
+        $inicio = Carbon::parse($fechaInicio);
+        $terminacion = Carbon::parse($fechaTerminacion);
         
-        if ($dias <= 15) {
-            return 'warning';
-        }
+        $diasTotales = $inicio->diffInDays($terminacion);
+        $diasMitad = intdiv($diasTotales, 2);
         
-        return 'success';
+        $fechaPrimerInforme = $inicio->copy()->addDays($diasMitad);
+        $fechaPrimerInforme = self::ajustarFinDeSemana($fechaPrimerInforme);
+        
+        $set('fecha_limite_primer_informe', $fechaPrimerInforme->format('Y-m-d'));
     }
 }
