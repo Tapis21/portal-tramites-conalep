@@ -19,21 +19,22 @@ class DashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Marcar todos los anuncios como vistos para este usuario
         foreach ($anuncios as $anuncio) {
             if (!$anuncio->vistoPor($user)) {
                 $anuncio->marcarComoVisto($user);
             }
         }
 
-        // 🔹 Servicio Social
+        // 🔹 Servicio Social - cálculos igual que en el perfil
         $servicioSocial = $user->servicioSocial;
-        $estatusSS = $servicioSocial ? $this->getEstatusLabel($servicioSocial->estatus) : 'No solicitado';
+        $tieneSS = $servicioSocial && $servicioSocial->fecha_inicio;
+        $estatusSS = $tieneSS ? $this->getEstatusLabel($servicioSocial->estatus) : 'No solicitado';
         $progresoSS = $this->calcularProgreso($servicioSocial, 'servicio_social');
 
-        // 🔹 Prácticas
+        // 🔹 Prácticas - cálculos igual que en el perfil
         $practica = $user->practicas;
-        $estatusPP = $practica ? $this->getEstatusLabel($practica->estatus) : 'No solicitado';
+        $tienePP = $practica && $practica->fecha_inicio;
+        $estatusPP = $tienePP ? $this->getEstatusLabel($practica->estatus) : 'No solicitado';
         $progresoPP = $this->calcularProgreso($practica, 'practicas');
 
         // 🔹 Estudiante activo (basado en periodos)
@@ -71,12 +72,11 @@ class DashboardController extends Controller
 
         $fechaInicio = \Carbon\Carbon::parse($tramite->fecha_inicio);
 
-        // Determinar fecha límite según el tipo
         if ($tipo === 'servicio_social') {
             $fechaLimite = $tramite->fecha_limite_segundo_informe 
                 ? \Carbon\Carbon::parse($tramite->fecha_limite_segundo_informe) 
                 : null;
-        } else { // practicas
+        } else {
             $fechaLimite = $tramite->fecha_limite_final 
                 ? \Carbon\Carbon::parse($tramite->fecha_limite_final) 
                 : null;
@@ -92,8 +92,6 @@ class DashboardController extends Controller
         }
 
         $diasTranscurridos = $fechaInicio->diffInDays(now());
-
-        // Si ya pasó la fecha límite, el progreso es 100%
         if ($diasTranscurridos >= $diasTotales) {
             return 100;
         }

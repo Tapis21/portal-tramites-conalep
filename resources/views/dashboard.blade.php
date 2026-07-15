@@ -38,22 +38,20 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TARJETAS DE PROGRESO CON CÍRCULOS -->
+    <!-- TARJETAS DE PROGRESO (ESTILO PERFIL) -->
     <!-- ========================================== -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <!-- Servicio Social -->
         <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-green-200">
             <div class="p-6">
                 <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
-                                <span class="iconify w-5 h-5 text-green-700" data-icon="mdi:briefcase-account"></span>
-                            </div>
-                            <div>
-                                <h2 class="text-lg font-bold text-gray-900">Servicio Social</h2>
-                                <p class="text-xs text-gray-500">Estado actual de tu trámite</p>
-                            </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
+                            <span class="iconify w-5 h-5 text-green-700" data-icon="mdi:briefcase-account"></span>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Servicio Social</h2>
+                            <p class="text-xs text-gray-500">Estado actual de tu trámite</p>
                         </div>
                     </div>
                     <a href="{{ route('servicio-social.index') }}" class="inline-flex items-center gap-0.5 text-green-700 hover:text-green-800 text-sm font-medium transition group">
@@ -62,63 +60,61 @@
                     </a>
                 </div>
 
-                <!-- Círculo de progreso + Info -->
-                <div class="flex flex-col sm:flex-row items-center gap-6">
+                <!-- Círculo de progreso + Info (estilo perfil) -->
+                @php
+                    $tieneSS = $servicioSocial && $servicioSocial->fecha_inicio;
+                    $estatusSSLabel = $estatusSS ?? 'No solicitado';
+                    $progresoSS = min($progresoSS ?? 0, 100);
+                @endphp
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <div class="relative flex-shrink-0">
                         @php
-                            $progresoSS = min($progresoSS ?? 0, 100);
-                            $circunferencia = 2 * pi() * 45;
+                            $circunferencia = 2 * pi() * 30; // radio 30
                             $offset = $circunferencia - ($progresoSS / 100) * $circunferencia;
                         @endphp
-                        <svg class="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
-                            <!-- Fondo gris -->
-                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="7" fill="none"/>
-                            <!-- Progreso verde (solo si > 0) -->
+                        <svg class="w-20 h-20 transform -rotate-90">
+                            <circle cx="50%" cy="50%" r="30" stroke="#e5e7eb" stroke-width="6" fill="none"/>
                             @if($progresoSS > 0)
-                                <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="7" fill="none"
+                                <circle cx="50%" cy="50%" r="30" stroke="#15803d" stroke-width="6" fill="none"
                                         stroke-dasharray="{{ $circunferencia }}"
                                         stroke-dashoffset="{{ $offset }}"
                                         stroke-linecap="butt"
                                         class="transition-all duration-1000 ease-out"/>
                             @endif
                         </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-2xl font-bold text-gray-900">{{ $progresoSS }}%</span>
-                            <span class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Progreso</span>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xs font-bold text-gray-900">{{ $progresoSS }}%</span>
                         </div>
                     </div>
 
-                    <div class="flex-1 space-y-1.5 text-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="iconify w-4 h-4 text-green-700" data-icon="mdi:calendar-start"></span>
-                            <span class="text-gray-600">Inicio:</span>
-                            <span class="font-medium text-gray-900">
-                                {{ $servicioSocial && $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio)->format('d/m/Y') : '—' }}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="iconify w-4 h-4 text-green-700" data-icon="mdi:calendar-end"></span>
-                            <span class="text-gray-600">Finalización:</span>
-                            <span class="font-medium text-gray-900">
-                                {{ $servicioSocial && $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : '—' }}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2 pt-1">
+                    <div class="flex-1 space-y-1 text-sm">
+                        <div class="flex flex-wrap items-center gap-3">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
-                                @if($estatusSS == 'Liberado') bg-green-100 text-green-800
-                                @elseif($estatusSS == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
-                                @elseif($estatusSS == 'En progreso') bg-green-50 text-green-700
-                                @elseif($estatusSS == 'Pendiente') bg-gray-100 text-gray-600
+                                @if($estatusSSLabel == 'Liberado') bg-green-100 text-green-800
+                                @elseif($estatusSSLabel == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
+                                @elseif($estatusSSLabel == 'En progreso') bg-green-50 text-green-700
+                                @elseif($estatusSSLabel == 'Pendiente') bg-gray-100 text-gray-600
                                 @else bg-gray-100 text-gray-500 @endif">
                                 <span class="iconify w-3 h-3" data-icon="
-                                    @if($estatusSS == 'Liberado') mdi:check-decagram
-                                    @elseif($estatusSS == 'Pendiente de revisión') mdi:clock-check
-                                    @elseif($estatusSS == 'En progreso') mdi:progress-clock
-                                    @elseif($estatusSS == 'Pendiente') mdi:clock-outline
+                                    @if($estatusSSLabel == 'Liberado') mdi:check-decagram
+                                    @elseif($estatusSSLabel == 'Pendiente de revisión') mdi:clock-check
+                                    @elseif($estatusSSLabel == 'En progreso') mdi:progress-clock
+                                    @elseif($estatusSSLabel == 'Pendiente') mdi:clock-outline
                                     @else mdi:clock-outline @endif
                                 "></span>
-                                {{ $estatusSS }}
+                                {{ $estatusSSLabel }}
                             </span>
+                            <span class="text-xs text-gray-400 flex items-center gap-1">
+                                <span class="iconify w-3 h-3" data-icon="mdi:calendar-start"></span>
+                                Inicio: {{ $servicioSocial && $servicioSocial->fecha_inicio ? \Carbon\Carbon::parse($servicioSocial->fecha_inicio)->format('d/m/Y') : '—' }}
+                            </span>
+                            <span class="text-xs text-gray-400 flex items-center gap-1">
+                                <span class="iconify w-3 h-3" data-icon="mdi:calendar-end"></span>
+                                Fin: {{ $servicioSocial && $servicioSocial->fecha_limite_segundo_informe ? \Carbon\Carbon::parse($servicioSocial->fecha_limite_segundo_informe)->format('d/m/Y') : '—' }}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-green-700 h-1.5 rounded-full transition-all duration-1000" style="width: {{ $progresoSS }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -129,15 +125,13 @@
         <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition hover:shadow-lg hover:border-green-200">
             <div class="p-6">
                 <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
-                                <span class="iconify w-5 h-5 text-green-700" data-icon="mdi:briefcase"></span>
-                            </div>
-                            <div>
-                                <h2 class="text-lg font-bold text-gray-900">Prácticas Profesionales</h2>
-                                <p class="text-xs text-gray-500">Estado actual de tu trámite</p>
-                            </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
+                            <span class="iconify w-5 h-5 text-green-700" data-icon="mdi:briefcase"></span>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Prácticas Profesionales</h2>
+                            <p class="text-xs text-gray-500">Estado actual de tu trámite</p>
                         </div>
                     </div>
                     <a href="{{ route('practicas.index') }}" class="inline-flex items-center gap-0.5 text-green-700 hover:text-green-800 text-sm font-medium transition group">
@@ -146,60 +140,60 @@
                     </a>
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-center gap-6">
+                @php
+                    $tienePP = $practica && $practica->fecha_inicio;
+                    $estatusPPLabel = $estatusPP ?? 'No solicitado';
+                    $progresoPP = min($progresoPP ?? 0, 100);
+                @endphp
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <div class="relative flex-shrink-0">
                         @php
-                            $progresoPP = min($progresoPP ?? 0, 100);
-                            $circunferencia = 2 * pi() * 45;
+                            $circunferencia = 2 * pi() * 30;
                             $offset = $circunferencia - ($progresoPP / 100) * $circunferencia;
                         @endphp
-                        <svg class="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
-                            <circle cx="50%" cy="50%" r="45%" stroke="#e5e7eb" stroke-width="7" fill="none"/>
+                        <svg class="w-20 h-20 transform -rotate-90">
+                            <circle cx="50%" cy="50%" r="30" stroke="#e5e7eb" stroke-width="6" fill="none"/>
                             @if($progresoPP > 0)
-                                <circle cx="50%" cy="50%" r="45%" stroke="#15803d" stroke-width="7" fill="none"
+                                <circle cx="50%" cy="50%" r="30" stroke="#15803d" stroke-width="6" fill="none"
                                         stroke-dasharray="{{ $circunferencia }}"
                                         stroke-dashoffset="{{ $offset }}"
                                         stroke-linecap="butt"
                                         class="transition-all duration-1000 ease-out"/>
                             @endif
                         </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-2xl font-bold text-gray-900">{{ $progresoPP }}%</span>
-                            <span class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Progreso</span>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xs font-bold text-gray-900">{{ $progresoPP }}%</span>
                         </div>
                     </div>
 
-                    <div class="flex-1 space-y-1.5 text-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="iconify w-4 h-4 text-green-700" data-icon="mdi:calendar-start"></span>
-                            <span class="text-gray-600">Inicio:</span>
-                            <span class="font-medium text-gray-900">
-                                {{ $practica && $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : '—' }}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="iconify w-4 h-4 text-green-700" data-icon="mdi:calendar-end"></span>
-                            <span class="text-gray-600">Finalización:</span>
-                            <span class="font-medium text-gray-900">
-                                {{ $practica && $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : '—' }}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2 pt-1">
+                    <div class="flex-1 space-y-1 text-sm">
+                        <div class="flex flex-wrap items-center gap-3">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
-                                @if($estatusPP == 'Liberado') bg-green-100 text-green-800
-                                @elseif($estatusPP == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
-                                @elseif($estatusPP == 'En progreso') bg-green-50 text-green-700
-                                @elseif($estatusPP == 'Pendiente') bg-gray-100 text-gray-600
+                                @if($estatusPPLabel == 'Liberado') bg-green-100 text-green-800
+                                @elseif($estatusPPLabel == 'Pendiente de revisión') bg-yellow-100 text-yellow-800
+                                @elseif($estatusPPLabel == 'En progreso') bg-green-50 text-green-700
+                                @elseif($estatusPPLabel == 'Pendiente') bg-gray-100 text-gray-600
                                 @else bg-gray-100 text-gray-500 @endif">
                                 <span class="iconify w-3 h-3" data-icon="
-                                    @if($estatusPP == 'Liberado') mdi:check-decagram
-                                    @elseif($estatusPP == 'Pendiente de revisión') mdi:clock-check
-                                    @elseif($estatusPP == 'En progreso') mdi:progress-clock
-                                    @elseif($estatusPP == 'Pendiente') mdi:clock-outline
+                                    @if($estatusPPLabel == 'Liberado') mdi:check-decagram
+                                    @elseif($estatusPPLabel == 'Pendiente de revisión') mdi:clock-check
+                                    @elseif($estatusPPLabel == 'En progreso') mdi:progress-clock
+                                    @elseif($estatusPPLabel == 'Pendiente') mdi:clock-outline
                                     @else mdi:clock-outline @endif
                                 "></span>
-                                {{ $estatusPP }}
+                                {{ $estatusPPLabel }}
                             </span>
+                            <span class="text-xs text-gray-400 flex items-center gap-1">
+                                <span class="iconify w-3 h-3" data-icon="mdi:calendar-start"></span>
+                                Inicio: {{ $practica && $practica->fecha_inicio ? \Carbon\Carbon::parse($practica->fecha_inicio)->format('d/m/Y') : '—' }}
+                            </span>
+                            <span class="text-xs text-gray-400 flex items-center gap-1">
+                                <span class="iconify w-3 h-3" data-icon="mdi:calendar-end"></span>
+                                Fin: {{ $practica && $practica->fecha_limite_final ? \Carbon\Carbon::parse($practica->fecha_limite_final)->format('d/m/Y') : '—' }}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-green-700 h-1.5 rounded-full transition-all duration-1000" style="width: {{ $progresoPP }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -208,11 +202,10 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- ANUNCIOS IMPORTANTES -->
+    <!-- ANUNCIOS IMPORTANTES (sin cambios) -->
     <!-- ========================================== -->
     <div class="bg-[#f8f8f8] rounded-xl shadow-md border border-gray-200/80 overflow-hidden">
         <div class="p-6">
-            <!-- Encabezado de anuncios -->
             <div class="flex items-center justify-between mb-5">
                 <div class="flex items-center gap-2">
                     <span class="iconify w-6 h-6 text-green-700" data-icon="mdi:bullhorn"></span>

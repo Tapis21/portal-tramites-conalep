@@ -35,11 +35,39 @@
                       data-icon="mdi:hand-heart"></span>
                 <span class="text-sm transition-colors duration-200">Servicio Social</span>
                 @php
-                    $ssPendiente = Auth::user()->servicioSocial && Auth::user()->servicioSocial->estatus === 'pendiente';
+                    // ✅ BADGE INTELIGENTE PARA SERVICIO SOCIAL (CORREGIDO)
+                    $user = Auth::user();
+                    $badgeSS = 0;
+
+                    if ($user->servicioSocial) {
+                        // 1. Documentos de SS con cambios de estado
+                        $documentosSS = \App\Models\Documento::where('user_id', $user->id)
+                            ->where('activo', true)
+                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
+                            ->whereIn('estatus', ['validado', 'validado_ventanilla', 'rechazado'])
+                            ->count();
+
+                        // 2. Comentarios nuevos de admin en documentos de SS
+                        // Paso 1: Obtener IDs de documentos de SS del usuario
+                        $documentosSSIds = \App\Models\Documento::where('user_id', $user->id)
+                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
+                            ->pluck('id')
+                            ->toArray();
+
+                        // Paso 2: Contar comentarios de admin no leídos en esos documentos
+                        $comentariosSS = \App\Models\Comentario::where('user_id', $user->id)
+                            ->where('tipo', 'admin')
+                            ->where('leido', false)
+                            ->where('comentable_type', 'App\\Models\\Documento')
+                            ->whereIn('comentable_id', $documentosSSIds)
+                            ->count();
+
+                        $badgeSS = $documentosSS + $comentariosSS;
+                    }
                 @endphp
-                @if($ssPendiente)
-                    <span class="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
-                        !
+                @if($badgeSS > 0)
+                    <span class="ml-auto flex items-center justify-center min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                        {{ $badgeSS }}
                     </span>
                 @endif
             </a>
@@ -55,11 +83,36 @@
                       data-icon="mdi:briefcase"></span>
                 <span class="text-sm transition-colors duration-200">Prácticas Profesionales</span>
                 @php
-                    $ppPendiente = Auth::user()->practicas && Auth::user()->practicas->estatus === 'pendiente';
+                    // ✅ BADGE INTELIGENTE PARA PRÁCTICAS (CORREGIDO)
+                    $badgePP = 0;
+
+                    if ($user->practicas) {
+                        // 1. Documentos de PP con cambios de estado
+                        $documentosPP = \App\Models\Documento::where('user_id', $user->id)
+                            ->where('activo', true)
+                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
+                            ->whereIn('estatus', ['validado', 'validado_ventanilla', 'rechazado'])
+                            ->count();
+
+                        // 2. Comentarios nuevos de admin en documentos de PP
+                        $documentosPPIds = \App\Models\Documento::where('user_id', $user->id)
+                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
+                            ->pluck('id')
+                            ->toArray();
+
+                        $comentariosPP = \App\Models\Comentario::where('user_id', $user->id)
+                            ->where('tipo', 'admin')
+                            ->where('leido', false)
+                            ->where('comentable_type', 'App\\Models\\Documento')
+                            ->whereIn('comentable_id', $documentosPPIds)
+                            ->count();
+
+                        $badgePP = $documentosPP + $comentariosPP;
+                    }
                 @endphp
-                @if($ppPendiente)
-                    <span class="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
-                        !
+                @if($badgePP > 0)
+                    <span class="ml-auto flex items-center justify-center min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                        {{ $badgePP }}
                     </span>
                 @endif
             </a>
@@ -183,8 +236,10 @@
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 {{ request()->routeIs('servicio-social.*') ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <span class="iconify w-5 h-5 {{ request()->routeIs('servicio-social.*') ? 'text-green-700' : 'text-gray-400' }}" data-icon="mdi:hand-heart"></span>
                 <span>Servicio Social</span>
-                @if($ssPendiente ?? false)
-                    <span class="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">!</span>
+                @if($badgeSS ?? 0 > 0)
+                    <span class="ml-auto flex items-center justify-center min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                        {{ $badgeSS }}
+                    </span>
                 @endif
             </a>
 
@@ -192,8 +247,10 @@
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 {{ request()->routeIs('practicas.*') ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <span class="iconify w-5 h-5 {{ request()->routeIs('practicas.*') ? 'text-green-700' : 'text-gray-400' }}" data-icon="mdi:briefcase"></span>
                 <span>Prácticas</span>
-                @if($ppPendiente ?? false)
-                    <span class="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">!</span>
+                @if($badgePP ?? 0 > 0)
+                    <span class="ml-auto flex items-center justify-center min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                        {{ $badgePP }}
+                    </span>
                 @endif
             </a>
 
