@@ -1,52 +1,40 @@
 <x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
-        @csrf
+    <div class="w-full max-w-sm sm:max-w-md bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_20px_40px_-10px_rgba(0,104,55,0.1),inset_0_0_0_1px_rgba(255,255,255,0.6)] opacity-0 translate-y-10 animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_forwards]">
 
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
-
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
+        <!-- Flecha de regreso -->
+        <div class="flex items-center justify-between mb-4 sm:mb-6">
+            <a href="{{ route('home') }}" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-green-700 transition-colors duration-200">
+                <span class="iconify w-4 h-4" data-icon="mdi:arrow-left"></span>
+                Volver al inicio
             </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
+            <span class="text-xs text-gray-400">Registro</span>
         </div>
-    </form>
+
+        <!-- Título -->
+        <div class="text-center mb-4 sm:mb-6">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Crear cuenta</h2>
+            <p class="text-xs text-gray-500 mt-1">El registro debe realizarse de forma presencial</p>
+        </div>
+
+        <!-- Modal de información -->
+        <div class="bg-amber-50 border-l-4 border-amber-500 text-amber-700 p-4 rounded-lg mb-4 text-sm flex items-start gap-3">
+            <span class="iconify w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" data-icon="mdi:information"></span>
+            <div>
+                <p class="font-medium">Registro en ventanilla</p>
+                <p class="text-xs mt-1">Para crear tu cuenta, debes acercarte al departamento de servicios escolares con tu matrícula y documentos oficiales.</p>
+                <a href="{{ route('home') }}" class="inline-flex items-center gap-1 mt-2 text-amber-700 hover:text-amber-800 font-medium text-xs transition">
+                    Volver al inicio
+                    <span class="iconify w-3 h-3" data-icon="mdi:arrow-right"></span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="text-center text-xs text-gray-400 mt-4">
+            <p>¿Ya tienes cuenta? <a href="{{ route('login') }}" class="text-green-700 hover:text-green-800 font-medium transition">Inicia sesión aquí</a></p>
+        </div>
+
+        <!-- Footer -->
+        @include('partials.footer')
+    </div>
 </x-guest-layout>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServicioSocialController;
 use App\Http\Controllers\DocumentoStatusController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\SolicitudServicioSocialController;
@@ -13,9 +14,11 @@ use App\Http\Controllers\SolicitudPracticaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ImportController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::get('/', function () {
+//     return view('welcome');
+// });
+
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth'])->name('dashboard');
 
