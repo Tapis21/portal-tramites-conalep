@@ -14,6 +14,8 @@ use App\Http\Controllers\SolicitudPracticaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ImportController;
 
+use App\Http\Controllers\PDFController;
+
 // Route::get('/', function () {
 //     return view('welcome');
 // });
@@ -62,7 +64,14 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/solicitud-servicio-social', [SolicitudServicioSocialController::class, 'create'])->name('solicitud-servicio-social.create');
     Route::post('/solicitud-servicio-social', [SolicitudServicioSocialController::class, 'store'])->name('solicitud-servicio-social.store');
-    
+
+    // ==================== RUTAS PARA PDF (SERVICIO SOCIAL) ====================
+    Route::get('servicio-social/{id}/descargar-solicitud-pdf', [PDFController::class, 'descargarSolicitudSS'])->name('servicio-social.descargar-solicitud-pdf');
+    Route::get('servicio-social/{id}/descargar-modalidad-pdf', [PDFController::class, 'descargarModalidadSS'])->name('servicio-social.descargar-modalidad-pdf');
+    Route::get('servicio-social/{id}/descargar-carta-presentacion-pdf', [PDFController::class, 'descargarCartaPresentacionSS'])->name('servicio-social.descargar-carta-presentacion-pdf');
+    Route::get('servicio-social/{id}/descargar-primer-informe-pdf', [PDFController::class, 'descargarPrimerInformeSS'])->name('servicio-social.descargar-primer-informe-pdf');
+    Route::get('servicio-social/{id}/descargar-segundo-informe-pdf', [PDFController::class, 'descargarSegundoInformeSS'])->name('servicio-social.descargar-segundo-informe-pdf');
+    Route::get('servicio-social/{id}/descargar-evaluacion-pdf', [PDFController::class, 'descargarEvaluacionSS'])->name('servicio-social.descargar-evaluacion-pdf');
     
     // ==================== PRÁCTICAS PROFESIONALES ====================
     
@@ -99,6 +108,14 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/solicitud-practicas', [SolicitudPracticaController::class, 'create'])->name('solicitud-practicas.create');
     Route::post('/solicitud-practicas', [SolicitudPracticaController::class, 'store'])->name('solicitud-practicas.store');
+
+    // ==================== RUTAS PARA PDF (PRÁCTICAS) ====================
+    Route::get('practicas/{id}/descargar-solicitud-pdf', [PDFController::class, 'descargarSolicitudPP'])->name('practicas.descargar-solicitud-pdf');
+    Route::get('practicas/{id}/descargar-modalidad-pdf', [PDFController::class, 'descargarModalidadPP'])->name('practicas.descargar-modalidad-pdf');
+    Route::get('practicas/{id}/descargar-carta-presentacion-pdf', [PDFController::class, 'descargarCartaPresentacionPP'])->name('practicas.descargar-carta-presentacion-pdf');
+    Route::get('practicas/{id}/descargar-primer-informe-pdf', [PDFController::class, 'descargarPrimerInformePP'])->name('practicas.descargar-primer-informe-pdf');
+    Route::get('practicas/{id}/descargar-segundo-informe-pdf', [PDFController::class, 'descargarSegundoInformePP'])->name('practicas.descargar-segundo-informe-pdf');
+    Route::get('practicas/{id}/descargar-evaluacion-pdf', [PDFController::class, 'descargarEvaluacionPP'])->name('practicas.descargar-evaluacion-pdf');
 
     Route::post('/comentarios/marcar-leidos', [App\Http\Controllers\ComentarioController::class, 'marcarLeidos'])->name('comentarios.marcar-leidos')->middleware('auth');
 

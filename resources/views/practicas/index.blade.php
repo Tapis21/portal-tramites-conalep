@@ -215,14 +215,56 @@
 
                     @php
                         $documentosOrdenados = [
-                            'Solicitud de Prácticas Profesionales' => ['ruta' => 'subir-solicitud', 'descargable' => true, 'tooltip' => 'Descarga el formato de solicitud generado automáticamente con tus datos.'],
-                            'Elección de Modalidad' => ['ruta' => 'subir-modalidad', 'descargable' => true, 'tooltip' => 'Descarga el formato de elección de modalidad para seleccionar tu opción.'],
-                            'Carta de Presentación de Prácticas Profesionales' => ['ruta' => 'subir-carta-presentacion', 'descargable' => true, 'tooltip' => 'Descarga la carta de presentación para entregar en la empresa.'],
-                            'Carta de Aceptación' => ['ruta' => 'subir-carta-aceptacion', 'descargable' => false, 'tooltip' => 'Este documento es proporcionado por la empresa. No requiere descarga.'],
-                            'Primer Informe de Actividades' => ['ruta' => 'subir-reporte-parcial', 'descargable' => true, 'tooltip' => 'Descarga el formato del primer informe de actividades.'],
-                            'Segundo Informe de Actividades' => ['ruta' => 'subir-reporte-final', 'descargable' => true, 'tooltip' => 'Descarga el formato del segundo informe de actividades.'],
-                            'Evaluación de Competencias del Desempeño' => ['ruta' => 'subir-evaluacion', 'descargable' => true, 'tooltip' => 'Descarga el formato de evaluación de competencias.'],
-                            'Carta de Liberación de Prácticas Profesionales' => ['ruta' => 'subir-liberacion', 'descargable' => false, 'tooltip' => 'Este documento es emitido al finalizar el trámite. No requiere descarga.'],
+                            'Solicitud de Prácticas Profesionales' => [
+                                'ruta' => 'subir-solicitud',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga el formato de solicitud generado automáticamente con tus datos.',
+                                'ruta_pdf' => 'practicas.descargar-solicitud-pdf'
+                            ],
+                            'Elección de Modalidad' => [
+                                'ruta' => 'subir-modalidad',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga el formato de elección de modalidad para seleccionar tu opción.',
+                                'ruta_pdf' => 'practicas.descargar-modalidad-pdf'
+                            ],
+                            'Carta de Presentación de Prácticas Profesionales' => [
+                                'ruta' => 'subir-carta-presentacion',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga la carta de presentación para entregar en la empresa.',
+                                'ruta_pdf' => 'practicas.descargar-carta-presentacion-pdf'
+                            ],
+                            'Carta de Aceptación' => [
+                                'ruta' => 'subir-carta-aceptacion',
+                                'descargable' => false,
+                                'tooltip' => 'Este documento es proporcionado por la empresa. No requiere descarga.',
+                                'ruta_pdf' => null
+                            ],
+                            'Primer Informe de Actividades' => [
+                                'ruta' => 'subir-reporte-parcial',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga el formato del primer informe de actividades.',
+                                'ruta_pdf' => 'practicas.descargar-primer-informe-pdf',
+                                'fecha_limite' => $fechaPrimer
+                            ],
+                            'Segundo Informe de Actividades' => [
+                                'ruta' => 'subir-reporte-final',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga el formato del segundo informe de actividades.',
+                                'ruta_pdf' => 'practicas.descargar-segundo-informe-pdf',
+                                'fecha_limite' => $fechaSegundo
+                            ],
+                            'Evaluación de Competencias del Desempeño' => [
+                                'ruta' => 'subir-evaluacion',
+                                'descargable' => true,
+                                'tooltip' => 'Descarga el formato de evaluación de competencias.',
+                                'ruta_pdf' => 'practicas.descargar-evaluacion-pdf'
+                            ],
+                            'Carta de Liberación de Prácticas Profesionales' => [
+                                'ruta' => 'subir-liberacion',
+                                'descargable' => false,
+                                'tooltip' => 'Este documento es emitido al finalizar el trámite. No requiere descarga.',
+                                'ruta_pdf' => null
+                            ],
                         ];
 
                         $documentos = \App\Models\Documento::where('user_id', Auth::id())
@@ -240,6 +282,30 @@
                                     $ruta = $config['ruta'];
                                     $descargable = $config['descargable'];
                                     $tooltip = $config['tooltip'];
+                                    $rutaPdf = $config['ruta_pdf'] ?? null;
+                                    $fechaLimite = $config['fecha_limite'] ?? null;
+                                    
+                                    // ✅ Lógica para mostrar botón de descarga de PDF
+                                    $mostrarBotonPDF = false;
+                                    if ($descargable && $practica->fecha_inicio) {
+                                        // Si es un informe, verificar los 5 días antes de la fecha límite
+                                        if (isset($config['fecha_limite']) && $fechaLimite) {
+                                            $hoy = now();
+                                            $diasAntes = $hoy->diffInDays($fechaLimite, false);
+                                            // Mostrar si faltan 5 días o menos y no ha pasado la fecha
+                                            if ($diasAntes >= 0 && $diasAntes <= 5) {
+                                                $mostrarBotonPDF = true;
+                                            }
+                                            // Si ya pasó la fecha, también mostrar (para que pueda descargar aunque esté vencido)
+                                            if ($diasAntes < 0) {
+                                                $mostrarBotonPDF = true;
+                                            }
+                                        } elseif (!isset($config['fecha_limite'])) {
+                                            // Documentos que no son informes: siempre mostrar si hay fecha de inicio
+                                            $mostrarBotonPDF = true;
+                                        }
+                                    }
+
                                     $doc = $documentos[$nombre] ?? null;
                                     $estaSubido = $doc && $doc->archivo_pdf !== null;
                                     $estatusDoc = $doc ? $doc->estatus : 'pendiente';
@@ -297,19 +363,13 @@
                                             @endif
                                         </div>
 
-                                        <!-- Descarga -->
-                                        <div class="md:col-span-2 flex justify-center">
-                                            @if($descargable && $practica->fecha_inicio && $nombre == 'Solicitud de Prácticas Profesionales')
-                                                <a href="{{ route('practicas.word', $practica->id) }}" 
+                                        <!-- Descarga (PDF) -->
+                                        <div class="md:col-span-2 flex flex-wrap items-center justify-center gap-1">
+                                            @if($mostrarBotonPDF && $rutaPdf)
+                                                <a href="{{ route($rutaPdf, $practica->id) }}" 
                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition shadow-sm hover:shadow w-full sm:w-auto justify-center">
-                                                    <span class="iconify w-4 h-4" data-icon="mdi:download"></span>
-                                                    <span>Descargar</span>
-                                                </a>
-                                            @elseif($descargable && $practica->fecha_inicio)
-                                                <a href="#" 
-                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition shadow-sm hover:shadow w-full sm:w-auto justify-center opacity-50 cursor-not-allowed">
-                                                    <span class="iconify w-4 h-4" data-icon="mdi:download"></span>
-                                                    <span>Próximamente</span>
+                                                    <span class="iconify w-4 h-4" data-icon="mdi:file-pdf-box"></span>
+                                                    <span>PDF</span>
                                                 </a>
                                             @else
                                                 <span class="text-gray-300 text-xs w-full text-center block">—</span>
