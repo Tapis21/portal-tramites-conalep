@@ -35,34 +35,22 @@
                       data-icon="mdi:hand-heart"></span>
                 <span class="text-sm transition-colors duration-200">Servicio Social</span>
                 @php
-                    // ✅ BADGE INTELIGENTE PARA SERVICIO SOCIAL (CORREGIDO)
                     $user = Auth::user();
                     $badgeSS = 0;
 
                     if ($user->servicioSocial) {
-                        // 1. Documentos de SS con cambios de estado
-                        $documentosSS = \App\Models\Documento::where('user_id', $user->id)
-                            ->where('activo', true)
-                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
-                            ->whereIn('estatus', ['validado', 'validado_ventanilla', 'rechazado'])
-                            ->count();
-
-                        // 2. Comentarios nuevos de admin en documentos de SS
-                        // Paso 1: Obtener IDs de documentos de SS del usuario
+                        // ✅ SOLO comentarios nuevos de admin en documentos de SS
                         $documentosSSIds = \App\Models\Documento::where('user_id', $user->id)
                             ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
                             ->pluck('id')
                             ->toArray();
 
-                        // Paso 2: Contar comentarios de admin no leídos en esos documentos
-                        $comentariosSS = \App\Models\Comentario::where('user_id', $user->id)
+                        $badgeSS = \App\Models\Comentario::where('user_id', $user->id)
                             ->where('tipo', 'admin')
                             ->where('leido', false)
                             ->where('comentable_type', 'App\\Models\\Documento')
                             ->whereIn('comentable_id', $documentosSSIds)
                             ->count();
-
-                        $badgeSS = $documentosSS + $comentariosSS;
                     }
                 @endphp
                 @if($badgeSS > 0)
@@ -83,31 +71,21 @@
                       data-icon="mdi:briefcase"></span>
                 <span class="text-sm transition-colors duration-200">Prácticas Profesionales</span>
                 @php
-                    // ✅ BADGE INTELIGENTE PARA PRÁCTICAS (CORREGIDO)
                     $badgePP = 0;
 
                     if ($user->practicas) {
-                        // 1. Documentos de PP con cambios de estado
-                        $documentosPP = \App\Models\Documento::where('user_id', $user->id)
-                            ->where('activo', true)
-                            ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
-                            ->whereIn('estatus', ['validado', 'validado_ventanilla', 'rechazado'])
-                            ->count();
-
-                        // 2. Comentarios nuevos de admin en documentos de PP
+                        // ✅ SOLO comentarios nuevos de admin en documentos de PP
                         $documentosPPIds = \App\Models\Documento::where('user_id', $user->id)
                             ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'PP'))
                             ->pluck('id')
                             ->toArray();
 
-                        $comentariosPP = \App\Models\Comentario::where('user_id', $user->id)
+                        $badgePP = \App\Models\Comentario::where('user_id', $user->id)
                             ->where('tipo', 'admin')
                             ->where('leido', false)
                             ->where('comentable_type', 'App\\Models\\Documento')
                             ->whereIn('comentable_id', $documentosPPIds)
                             ->count();
-
-                        $badgePP = $documentosPP + $comentariosPP;
                     }
                 @endphp
                 @if($badgePP > 0)

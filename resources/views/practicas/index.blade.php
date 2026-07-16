@@ -316,8 +316,10 @@
                                             @endif
                                         </div>
 
-                                        <!-- Acciones + comentarios (CON LOS BOTONES EN SU POSICIÓN ORIGINAL) -->
-                                        <div class="md:col-span-4 flex flex-wrap items-center justify-end gap-1.5">
+                                        <!-- ========================================== -->
+                                        <!-- ACCIONES + COMENTARIOS (MEXICANADA) -->
+                                        <!-- ========================================== -->
+                                        <div class="md:col-span-4 flex flex-wrap items-center justify-start sm:justify-end gap-1.5 w-full md:w-auto">
                                             @if($doc && $doc->archivo_pdf)
                                                 @if($bloqueado)
                                                     <span class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 text-gray-500 text-xs font-medium rounded-lg cursor-not-allowed">
@@ -360,11 +362,11 @@
                                                             </span>
                                                         @endif
                                                     </button>
-                                                    <!-- Tooltip de comentarios: SIEMPRE A LA DERECHA -->
+                                                    <!-- ✅ Tooltip de comentarios: en móvil a la IZQUIERDA, en desktop a la DERECHA -->
                                                     <div class="absolute z-50 w-64 sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto
-                                                                right-0 mt-2 md:right-0">
+                                                                left-0 mt-2 md:right-0 md:left-auto">
                                                         <div class="absolute -top-2 w-3 h-3 bg-white border-l border-t border-gray-200 transform rotate-45
-                                                                    right-4 md:right-4"></div>
+                                                                    left-4 md:right-4 md:left-auto"></div>
                                                         <div class="p-3 max-h-48 overflow-y-auto space-y-1">
                                                             <div class="flex items-center justify-between mb-2">
                                                                 <span class="text-xs font-semibold text-gray-700">Comentarios</span>
