@@ -39,6 +39,26 @@ class PDFController extends Controller
         $user = $data->user;
         Carbon::setLocale('es');
 
+        // ========================================== //
+        // 🔥 LOGO DEL PIE - PARA TODOS LOS PDFs
+        // ========================================== //
+        $logoPiePath = public_path('images/logotipadopie.png');
+        if (file_exists($logoPiePath)) {
+            $logoPieBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPiePath));
+        } else {
+            $logoPieBase64 = '';
+        }
+
+        // ========================================== //
+        // 🔥 LOGO DEL ENCABEZADO - PARA TODOS LOS PDFs
+        // ========================================== //
+        $logoPath = public_path('images/Quintana-Roo.png');
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $logoBase64 = '';
+        }
+
         $variables = [
             'nombre_completo' => trim($user->name . ' ' . $user->apellidos),
             'nombre' => $user->name,
@@ -61,6 +81,9 @@ class PDFController extends Controller
             'tipo_tramite' => $tramite === 'ss' ? 'Servicio Social' : 'Prácticas Profesionales',
             'checkbox_ss' => $tramite === 'ss' ? 'X' : '',
             'checkbox_pp' => $tramite === 'pp' ? 'X' : '',
+            // 🔥 LOGOS - DISPONIBLES PARA TODOS LOS PDFs
+            'logo_base64' => $logoBase64,
+            'logo_pie_base64' => $logoPieBase64,
         ];
 
         // Fechas según el tipo de trámite
@@ -87,15 +110,6 @@ class PDFController extends Controller
         try {
             $servicioSocial = $this->validarPermiso('ss', $id);
             $variables = $this->getVariables('ss', $servicioSocial);
-
-            // 🔥 CONVERTIR LOGO A BASE64
-            $logoPath = public_path('images/Quintana-Roo.png');
-            if (file_exists($logoPath)) {
-                $variables['logo_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-            } else {
-                // Fallback si no existe la imagen
-                $variables['logo_base64'] = '';
-            }
 
             $pdf = Pdf::loadView('servicio_social.pdfs.solicitud', $variables);
             $pdf->setPaper('letter', 'portrait');
@@ -125,14 +139,6 @@ class PDFController extends Controller
             $practica = $this->validarPermiso('pp', $id);
             $variables = $this->getVariables('pp', $practica);
 
-            // 🔥 CONVERTIR LOGO A BASE64
-            $logoPath = public_path('images/Quintana-Roo.png');
-            if (file_exists($logoPath)) {
-                $variables['logo_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-            } else {
-                $variables['logo_base64'] = '';
-            }
-
             $pdf = Pdf::loadView('practicas.pdfs.solicitud', $variables);
             $pdf->setPaper('letter', 'portrait');
             $pdf->setOptions([
@@ -157,13 +163,27 @@ class PDFController extends Controller
     // ============================================================
     public function descargarModalidadSS($id)
     {
-        $servicioSocial = $this->validarPermiso('ss', $id);
-        $variables = $this->getVariables('ss', $servicioSocial);
+        try {
+            $servicioSocial = $this->validarPermiso('ss', $id);
+            $variables = $this->getVariables('ss', $servicioSocial);
 
-        $pdf = Pdf::loadView('servicio_social.pdfs.modalidad', $variables);
-        $pdf->setPaper('letter');
+            $pdf = Pdf::loadView('servicio_social.pdfs.modalidad', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
 
-        return $pdf->download('modalidad_ss_' . $servicioSocial->user->matricula . '.pdf');
+            return $pdf->download('modalidad_ss_' . $servicioSocial->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 
     // ============================================================
@@ -171,69 +191,56 @@ class PDFController extends Controller
     // ============================================================
     public function descargarCartaPresentacionSS($id)
     {
-        $servicioSocial = $this->validarPermiso('ss', $id);
-        $variables = $this->getVariables('ss', $servicioSocial);
+        try {
+            $servicioSocial = $this->validarPermiso('ss', $id);
+            $variables = $this->getVariables('ss', $servicioSocial);
 
-        $pdf = Pdf::loadView('servicio_social.pdfs.carta-presentacion', $variables);
-        $pdf->setPaper('letter');
+            // 🔥 IMÁGENES PARA CARTA PRESENTACIÓN
+            $logoEducacionPath = public_path('images/Logo-Eduación.png');
+            if (file_exists($logoEducacionPath)) {
+                $variables['logo_educacion_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoEducacionPath));
+            } else {
+                $variables['logo_educacion_base64'] = '';
+            }
 
-        return $pdf->download('carta_presentacion_ss_' . $servicioSocial->user->matricula . '.pdf');
-    }
+            $logoConalepPath = public_path('images/logo-conalep.png');
+            if (file_exists($logoConalepPath)) {
+                $variables['logo_conalep_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoConalepPath));
+            } else {
+                $variables['logo_conalep_base64'] = '';
+            }
 
-    // ============================================================
-    // 📌 SERVICIO SOCIAL - PRIMER INFORME
-    // ============================================================
-    public function descargarPrimerInformeSS($id)
-    {
-        $servicioSocial = $this->validarPermiso('ss', $id);
-        $variables = $this->getVariables('ss', $servicioSocial);
+            $firmaDrPath = public_path('images/firmaDrCano.png');
+            if (file_exists($firmaDrPath)) {
+                $variables['firma_dr_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($firmaDrPath));
+            } else {
+                $variables['firma_dr_base64'] = '';
+            }
 
-        $pdf = Pdf::loadView('servicio_social.pdfs.primer-informe', $variables);
-        $pdf->setPaper('letter');
+            $selloConalepPath = public_path('images/SelloConalep.png');
+            if (file_exists($selloConalepPath)) {
+                $variables['sello_conalep_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($selloConalepPath));
+            } else {
+                $variables['sello_conalep_base64'] = '';
+            }
 
-        return $pdf->download('primer_informe_ss_' . $servicioSocial->user->matricula . '.pdf');
-    }
+            $pdf = Pdf::loadView('servicio_social.pdfs.carta-presentacion', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
 
-    // ============================================================
-    // 📌 SERVICIO SOCIAL - SEGUNDO INFORME
-    // ============================================================
-    public function descargarSegundoInformeSS($id)
-    {
-        $servicioSocial = $this->validarPermiso('ss', $id);
-        $variables = $this->getVariables('ss', $servicioSocial);
+            return $pdf->download('carta_presentacion_ss_' . $servicioSocial->user->matricula . '.pdf');
 
-        $pdf = Pdf::loadView('servicio_social.pdfs.segundo-informe', $variables);
-        $pdf->setPaper('letter');
-
-        return $pdf->download('segundo_informe_ss_' . $servicioSocial->user->matricula . '.pdf');
-    }
-
-    // ============================================================
-    // 📌 SERVICIO SOCIAL - EVALUACIÓN
-    // ============================================================
-    public function descargarEvaluacionSS($id)
-    {
-        $servicioSocial = $this->validarPermiso('ss', $id);
-        $variables = $this->getVariables('ss', $servicioSocial);
-
-        $pdf = Pdf::loadView('servicio_social.pdfs.evaluacion', $variables);
-        $pdf->setPaper('letter');
-
-        return $pdf->download('evaluacion_ss_' . $servicioSocial->user->matricula . '.pdf');
-    }
-
-    // ============================================================
-    // 📌 PRÁCTICAS - MODALIDAD
-    // ============================================================
-    public function descargarModalidadPP($id)
-    {
-        $practica = $this->validarPermiso('pp', $id);
-        $variables = $this->getVariables('pp', $practica);
-
-        $pdf = Pdf::loadView('practicas.pdfs.modalidad', $variables);
-        $pdf->setPaper('letter');
-
-        return $pdf->download('modalidad_pp_' . $practica->user->matricula . '.pdf');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 
     // ============================================================
@@ -241,13 +248,168 @@ class PDFController extends Controller
     // ============================================================
     public function descargarCartaPresentacionPP($id)
     {
-        $practica = $this->validarPermiso('pp', $id);
-        $variables = $this->getVariables('pp', $practica);
+        try {
+            $practica = $this->validarPermiso('pp', $id);
+            $variables = $this->getVariables('pp', $practica);
 
-        $pdf = Pdf::loadView('practicas.pdfs.carta-presentacion', $variables);
-        $pdf->setPaper('letter');
+            // 🔥 IMÁGENES PARA CARTA PRESENTACIÓN
+            $logoEducacionPath = public_path('images/Logo-Eduación.png');
+            if (file_exists($logoEducacionPath)) {
+                $variables['logo_educacion_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoEducacionPath));
+            } else {
+                $variables['logo_educacion_base64'] = '';
+            }
 
-        return $pdf->download('carta_presentacion_pp_' . $practica->user->matricula . '.pdf');
+            $logoConalepPath = public_path('images/logo-conalep.png');
+            if (file_exists($logoConalepPath)) {
+                $variables['logo_conalep_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoConalepPath));
+            } else {
+                $variables['logo_conalep_base64'] = '';
+            }
+
+            $firmaDrPath = public_path('images/firmaDrCano.png');
+            if (file_exists($firmaDrPath)) {
+                $variables['firma_dr_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($firmaDrPath));
+            } else {
+                $variables['firma_dr_base64'] = '';
+            }
+
+            $selloConalepPath = public_path('images/SelloConalep.png');
+            if (file_exists($selloConalepPath)) {
+                $variables['sello_conalep_base64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($selloConalepPath));
+            } else {
+                $variables['sello_conalep_base64'] = '';
+            }
+
+            $pdf = Pdf::loadView('practicas.pdfs.carta-presentacion', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
+
+            return $pdf->download('carta_presentacion_pp_' . $practica->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
+    }
+
+    // ============================================================
+    // 📌 SERVICIO SOCIAL - PRIMER INFORME
+    // ============================================================
+    public function descargarPrimerInformeSS($id)
+    {
+        try {
+            $servicioSocial = $this->validarPermiso('ss', $id);
+            $variables = $this->getVariables('ss', $servicioSocial);
+
+            $pdf = Pdf::loadView('servicio_social.pdfs.primer-informe', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
+
+            return $pdf->download('primer_informe_ss_' . $servicioSocial->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
+    }
+
+    // ============================================================
+    // 📌 SERVICIO SOCIAL - SEGUNDO INFORME
+    // ============================================================
+    public function descargarSegundoInformeSS($id)
+    {
+        try {
+            $servicioSocial = $this->validarPermiso('ss', $id);
+            $variables = $this->getVariables('ss', $servicioSocial);
+
+            $pdf = Pdf::loadView('servicio_social.pdfs.segundo-informe', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
+
+            return $pdf->download('segundo_informe_ss_' . $servicioSocial->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
+    }
+
+    // ============================================================
+    // 📌 SERVICIO SOCIAL - EVALUACIÓN
+    // ============================================================
+    public function descargarEvaluacionSS($id)
+    {
+        try {
+            $servicioSocial = $this->validarPermiso('ss', $id);
+            $variables = $this->getVariables('ss', $servicioSocial);
+
+            $pdf = Pdf::loadView('servicio_social.pdfs.evaluacion', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
+
+            return $pdf->download('evaluacion_ss_' . $servicioSocial->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
+    }
+
+    // ============================================================
+    // 📌 PRÁCTICAS - MODALIDAD
+    // ============================================================
+    public function descargarModalidadPP($id)
+    {
+        try {
+            $practica = $this->validarPermiso('pp', $id);
+            $variables = $this->getVariables('pp', $practica);
+
+            $pdf = Pdf::loadView('practicas.pdfs.modalidad', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
+
+            return $pdf->download('modalidad_pp_' . $practica->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 
     // ============================================================
@@ -255,13 +417,27 @@ class PDFController extends Controller
     // ============================================================
     public function descargarPrimerInformePP($id)
     {
-        $practica = $this->validarPermiso('pp', $id);
-        $variables = $this->getVariables('pp', $practica);
+        try {
+            $practica = $this->validarPermiso('pp', $id);
+            $variables = $this->getVariables('pp', $practica);
 
-        $pdf = Pdf::loadView('practicas.pdfs.primer-informe', $variables);
-        $pdf->setPaper('letter');
+            $pdf = Pdf::loadView('practicas.pdfs.primer-informe', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
 
-        return $pdf->download('primer_informe_pp_' . $practica->user->matricula . '.pdf');
+            return $pdf->download('primer_informe_pp_' . $practica->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 
     // ============================================================
@@ -269,13 +445,27 @@ class PDFController extends Controller
     // ============================================================
     public function descargarSegundoInformePP($id)
     {
-        $practica = $this->validarPermiso('pp', $id);
-        $variables = $this->getVariables('pp', $practica);
+        try {
+            $practica = $this->validarPermiso('pp', $id);
+            $variables = $this->getVariables('pp', $practica);
 
-        $pdf = Pdf::loadView('practicas.pdfs.segundo-informe', $variables);
-        $pdf->setPaper('letter');
+            $pdf = Pdf::loadView('practicas.pdfs.segundo-informe', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
 
-        return $pdf->download('segundo_informe_pp_' . $practica->user->matricula . '.pdf');
+            return $pdf->download('segundo_informe_pp_' . $practica->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 
     // ============================================================
@@ -283,12 +473,26 @@ class PDFController extends Controller
     // ============================================================
     public function descargarEvaluacionPP($id)
     {
-        $practica = $this->validarPermiso('pp', $id);
-        $variables = $this->getVariables('pp', $practica);
+        try {
+            $practica = $this->validarPermiso('pp', $id);
+            $variables = $this->getVariables('pp', $practica);
 
-        $pdf = Pdf::loadView('practicas.pdfs.evaluacion', $variables);
-        $pdf->setPaper('letter');
+            $pdf = Pdf::loadView('practicas.pdfs.evaluacion', $variables);
+            $pdf->setPaper('letter', 'portrait');
+            $pdf->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'dpi' => 96,
+                'enable_css_float' => true,
+                'enable_remote' => true,
+            ]);
 
-        return $pdf->download('evaluacion_pp_' . $practica->user->matricula . '.pdf');
+            return $pdf->download('evaluacion_pp_' . $practica->user->matricula . '.pdf');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
     }
 }

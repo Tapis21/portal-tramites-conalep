@@ -10,7 +10,7 @@
         /* ========================================== */
         @page {
             size: letter;
-            margin: 8mm 15mm 10mm 15mm;
+            margin: 8mm 15mm 8mm 15mm;
         }
 
         body {
@@ -22,11 +22,10 @@
         }
 
         /* ========================================== */
-        /* ENCABEZADO */
+        /* ENCABEZADO - SIN LÍNEA NEGRA */
         /* ========================================== */
         .header {
             width: 100%;
-            border-bottom: 2px solid #000000;
             padding-bottom: 5px;
             margin-bottom: 5px;
             display: table;
@@ -139,10 +138,9 @@
         }
 
         /* ========================================== */
-        /* LEER IMPORTANTE - Arial MT 10pt */
+        /* LEER IMPORTANTE - SIN PALO NEGRO Y SIN FONDO */
         /* ========================================== */
         .leer-box {
-            border-left: 3px solid #000000;
             padding: 5px 10px;
             margin: 4px 0 6px 10px;
             font-family: 'Arial MT', 'Arial', sans-serif;
@@ -159,14 +157,13 @@
         }
 
         /* ========================================== */
-        /* SECCIONES - Arial 10pt */
+        /* SECCIONES - SIN LÍNEA GRIS */
         /* ========================================== */
         .section-title {
             font-family: 'Arial', sans-serif;
             font-size: 10pt;
             font-weight: 700;
             color: #000000;
-            border-bottom: 1px solid #cccccc;
             padding-bottom: 2px;
             margin: 7px 0 4px;
             text-transform: uppercase;
@@ -174,7 +171,7 @@
         }
 
         /* ========================================== */
-        /* DATOS - Arial MT 10pt */
+        /* DATOS - Arial 10pt (VALORES EN AZUL CON ARIAL) */
         /* ========================================== */
         .field-row {
             margin: 2.5px 0;
@@ -190,9 +187,10 @@
             color: #000000;
         }
 
+        /* 🔥 VALORES EN AZUL CON ARIAL */
         .field-value {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             border-bottom: 1px dashed #aaaaaa;
             padding: 0 4px;
@@ -200,16 +198,8 @@
         }
 
         .field-value-sin-linea {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
-            font-weight: 500;
-            padding: 0 4px;
-            font-size: 10pt;
-        }
-
-        .field-value-negro {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             padding: 0 4px;
             font-size: 10pt;
@@ -231,7 +221,7 @@
         }
 
         /* ========================================== */
-        /* FECHAS - Arial MT 10pt */
+        /* FECHAS - Arial 10pt (VALORES EN AZUL CON ARIAL) */
         /* ========================================== */
         .fecha-row {
             margin: 2.5px 0;
@@ -247,9 +237,10 @@
             color: #000000;
         }
 
+        /* 🔥 VALORES EN AZUL CON ARIAL */
         .fecha-value {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             border-bottom: 1px dashed #aaaaaa;
             padding: 0 4px;
@@ -257,8 +248,8 @@
         }
 
         .fecha-value-sin-linea {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             padding: 0 4px;
             font-size: 10pt;
@@ -276,10 +267,9 @@
         }
 
         /* ========================================== */
-        /* LEER IMPORTANTE 2 - Arial MT 10pt */
+        /* LEER IMPORTANTE 2 - SIN PALO NEGRO Y SIN FONDO */
         /* ========================================== */
         .leer-box-2 {
-            border-left: 3px solid #000000;
             padding: 5px 10px;
             margin: 7px 0 5px 10px;
             font-family: 'Arial MT', 'Arial', sans-serif;
@@ -314,9 +304,10 @@
             min-width: 180px;
         }
 
+        /* 🔥 VALORES EN AZUL CON ARIAL */
         .datos-vertical .value {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             border-bottom: 1px dashed #aaaaaa;
             padding: 0 4px;
@@ -324,8 +315,8 @@
         }
 
         .datos-vertical .value-sin-linea {
-            font-family: 'Arial MT', 'Arial', sans-serif;
-            color: #000000;
+            font-family: 'Arial', sans-serif;
+            color: #003399;
             font-weight: 500;
             padding: 0 4px;
             font-size: 10pt;
@@ -337,7 +328,7 @@
         .signature-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 18px;
+            margin-top: 15px;
         }
 
         .signature-table td {
@@ -349,12 +340,12 @@
 
         .signature-table .linea-firma {
             border-top: 1.5px solid #000000;
-            margin: 30px 0 4px;
+            margin: 28px 0 4px;
             width: 100%;
         }
 
         .signature-table .sin-linea {
-            margin: 30px 0 4px;
+            margin: 28px 0 4px;
             width: 100%;
         }
 
@@ -377,7 +368,7 @@
         /* PIE DE PÁGINA */
         /* ========================================== */
         .footer {
-            margin-top: 8px;
+            margin-top: 28px;
             padding-top: 0px;
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 7pt;
@@ -424,22 +415,34 @@
             text-decoration: underline;
         }
 
-        .footer .fila-final .certificado {
+        .footer .fila-final .certificado-wrapper {
             display: table-cell;
             text-align: right;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .footer .fila-final .certificado-wrapper img {
+            height: 16px;
+            width: auto;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .footer .fila-final .certificado-wrapper .certificado-text {
             font-family: 'Arial Black', 'Arial', sans-serif;
             font-size: 6.5pt;
             font-weight: 900;
             color: #000000;
             letter-spacing: 0.5px;
-            white-space: nowrap;
+            vertical-align: middle;
         }
 
         /* ========================================== */
         /* ESPACIADO PARA FIRMAS */
         /* ========================================== */
         .espacio-firmas {
-            height: 25px;
+            height: 20px;
         }
 
         /* ========================================== */
@@ -447,8 +450,6 @@
         /* ========================================== */
         @media print {
             body { background: #fff; }
-            .leer-box { background: #f8fafc; }
-            .leer-box-2 { background: #f8fafc; }
         }
 
         /* ========================================== */
@@ -497,7 +498,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- LEER IMPORTANTE 1 -->
+    <!-- LEER IMPORTANTE 1 - SIN PALO NEGRO -->
     <!-- ========================================== -->
     <div class="leer-box">
         <strong>LEER, IMPORTANTE: </strong>
@@ -575,7 +576,7 @@
     <div class="datos-vertical" style="padding-left:30px; margin-top:2px;">
         <span class="value-sin-linea">{{ $grado_academico }} {{ $nombre_persona_carta }}</span>
         <span class="field-separator"></span>
-        <span class="field-value-negro" style="color:#555555;">{{ $cargo_persona_carta }}</span>
+        <span class="value-sin-linea">{{ $cargo_persona_carta }}</span>
     </div>
 
     <div class="datos-vertical" style="margin-top:5px;">
@@ -584,7 +585,7 @@
     <div class="datos-vertical" style="padding-left:30px; margin-top:2px;">
         <span class="value-sin-linea">{{ $grado_academico_jefe }} {{ $nombre_jefe_inmediato }}</span>
         <span class="field-separator"></span>
-        <span class="field-value-negro" style="color:#555555;">{{ $cargo_jefe_inmediato }}</span>
+        <span class="value-sin-linea">{{ $cargo_jefe_inmediato }}</span>
     </div>
 
     <div class="datos-vertical" style="margin-top:5px;">
@@ -603,7 +604,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- LEER IMPORTANTE 2 -->
+    <!-- LEER IMPORTANTE 2 - SIN PALO NEGRO -->
     <!-- ========================================== -->
     <div class="leer-box-2">
         <strong>LEER, IMPORTANTE: </strong>
@@ -620,18 +621,15 @@
     <!-- ========================================== -->
     <table class="signature-table">
         <tr>
-            <!-- Columna 1: NOMBRE Y FIRMA -->
             <td>
                 <div class="linea-firma"></div>
                 <div class="signature-name">NOMBRE Y FIRMA</div>
                 <div class="signature-title">Jefe del área</div>
             </td>
-            <!-- Columna 2: SELLO (sin línea) -->
             <td>
                 <div class="sin-linea"></div>
                 <div class="signature-name">SELLO</div>
             </td>
-            <!-- Columna 3: DR. NICOLAS CANO RAMÍREZ (UNA SOLA LÍNEA) -->
             <td>
                 <div class="linea-firma"></div>
                 <div class="signature-name">DR. NICOLAS CANO RAMÍREZ</div>
@@ -656,7 +654,10 @@
             <span class="email">
                 e-mail: <a href="mailto:vinculacion.cancun2@qroo.conalep.edu.mx">vinculacion.cancun2@qroo.conalep.edu.mx</a>
             </span>
-            <span class="certificado">Certificado conforme a los requisitos de la norma ISO 9001:2008</span>
+            <span class="certificado-wrapper">
+                <img src="{{ $logo_pie_base64 }}" alt="Logo">
+                <span class="certificado-text">Certificado conforme a los requisitos de la norma ISO 9001:2008</span>
+            </span>
         </div>
     </div>
 
