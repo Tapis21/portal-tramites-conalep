@@ -1,0 +1,66 @@
+/* ========================================== */
+/* VARIABLES GLOBALES - CONALEP THEME */
+/* ========================================== */
+
+:root {
+    /* Colores principales CONALEP */
+    --color-primary: #15803d;
+    --color-primary-dark: #166534;
+    --color-primary-light: #22c55e;
+    --color-primary-bg: #f0fdf4;
+    --color-primary-border: #86efac;
+    
+    /* Colores secundarios */
+    --color-secondary: #1f2937;
+    --color-secondary-light: #4b5563;
+    --color-secondary-bg: #f9fafb;
+    
+    /* Colores de estado */
+    --color-success: #15803d;
+    --color-warning: #d97706;
+    --color-error: #dc2626;
+    --color-info: #2563eb;
+    
+    /* Colores neutros */
+    --color-white: #ffffff;
+    --color-gray-50: #f8f8f8;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-600: #4b5563;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
+    
+    /* Bordes y sombras */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* Tipografía */
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    
+    /* Transiciones */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
+    
+    /* Espaciado */
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.25rem;
+    --spacing-6: 1.5rem;
+    --spacing-8: 2rem;
+}

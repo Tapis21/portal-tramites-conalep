@@ -24,6 +24,11 @@ class DocumentoResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Documentos';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return DocumentoForm::configure($schema);

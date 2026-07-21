@@ -2,11 +2,10 @@
 
 namespace App\Filament\Resources\Empresas;
 
-use App\Filament\Resources\Empresas\Pages\CreateEmpresa;
-use App\Filament\Resources\Empresas\Pages\EditEmpresa;
 use App\Filament\Resources\Empresas\Pages\ListEmpresas;
+use App\Filament\Resources\Empresas\Pages\ViewEmpresa;
 use App\Filament\Resources\Empresas\Schemas\EmpresaForm;
-use App\Filament\Resources\Empresas\Tables\EmpresaTable;
+use App\Filament\Resources\Empresas\Tables\EmpresasTable;
 use App\Models\Empresa;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,11 +17,20 @@ class EmpresaResource extends Resource
 {
     protected static ?string $model = Empresa::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static ?string $recordTitleAttribute = 'nombre';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
 
     protected static ?string $navigationLabel = 'Empresas';
 
     protected static ?string $pluralModelLabel = 'Empresas';
+
+    protected static ?int $navigationSort = 3;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return '📁 Gestión de Trámites';
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -31,7 +39,7 @@ class EmpresaResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return EmpresaTable::configure($table);
+        return EmpresasTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -43,8 +51,7 @@ class EmpresaResource extends Resource
     {
         return [
             'index' => ListEmpresas::route('/'),
-            'create' => CreateEmpresa::route('/create'),
-            'edit' => EditEmpresa::route('/{record}/edit'),
+            'view' => ViewEmpresa::route('/{record}'),
         ];
     }
 }

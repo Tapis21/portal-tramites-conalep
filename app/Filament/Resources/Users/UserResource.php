@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use App\Models\EstudiantePeriodo;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,9 +19,20 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static ?string $navigationLabel = 'Usuarios';
+
+    protected static ?string $pluralModelLabel = 'Usuarios';
+
+    protected static ?int $navigationSort = 1;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return '⚙️ Configuración';
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -34,16 +46,14 @@ class UserResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListUsers::route('/'),
-            'create' => CreateUser::route('/create'),
+            // 'create' => CreateUser::route('/create'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }

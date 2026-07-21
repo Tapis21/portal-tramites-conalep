@@ -5,7 +5,7 @@ namespace App\Providers\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
+use App\Filament\Pages\Dashboard as AppDashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -17,6 +17,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Navigation\NavigationItem;
+use Filament\Navigation\NavigationGroup;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->authGuard('web')
             ->colors([
-                'primary' => Color::hex('#006937'), // Verde CONALEP
+                'primary' => Color::hex('#006937'),
                 'gray' => Color::Slate,
             ])
             ->brandName('CONALEP II')
@@ -39,12 +41,15 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                AppDashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                \App\Filament\Widgets\EstadisticasGenerales::class,
+                \App\Filament\Widgets\SolicitudesPendientesSS::class,
+                \App\Filament\Widgets\SolicitudesPendientesPP::class,
+                \App\Filament\Widgets\ProximasFinalizacionesSS::class,
+                \App\Filament\Widgets\ProximasFinalizacionesPP::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -60,6 +65,29 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            // ================================================================
+            // 📋 NAVIGATION GROUPS (SECCIONES DEL MENÚ)
+            // ================================================================
+            ->navigationGroups([
+                NavigationGroup::make()
+                    ->label('📋 General')
+                    ->collapsible(true)
+                    ->collapsed(false),
+
+                NavigationGroup::make()
+                    ->label('📁 Gestión de Trámites')
+                    ->collapsible(true)
+                    ->collapsed(false),
+
+                NavigationGroup::make()
+                    ->label('⚙️ Configuración')
+                    ->collapsible(true)
+                    ->collapsed(false),
+            ])
+            // ================================================================
+            // 🚀 ELIMINADO: El Dashboard se muestra automáticamente
+            // ================================================================
+            ->navigationItems([]); // ✅ Vacío para que solo se muestren los Resources y el Dashboard automático
     }
 }

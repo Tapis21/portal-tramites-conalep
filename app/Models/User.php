@@ -19,7 +19,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',           // nombre(s)
+        'name',
         'apellidos',
         'matricula',
         'carrera',
@@ -27,6 +27,7 @@ class User extends Authenticatable
         'semestre',
         'email',
         'password',
+        'password_changed_at',
         'estatus_servicio_social',
         'turno_id',
         'grupo',
@@ -52,6 +53,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime', // ✅ AGREGAR ESTA LÍNEA
         ];
     }
 
@@ -113,5 +115,25 @@ class User extends Authenticatable
                     ->wherePivot('estatus', 'cursando')
                     ->withPivot('estatus')
                     ->first();
+    }
+
+    // Relación con anuncios (vistos)
+    public function anuncios()
+    {
+        return $this->belongsToMany(Anuncio::class, 'anuncio_user')
+                    ->withPivot('visto', 'visto_at')
+                    ->withTimestamps();
+    }
+
+    // Obtener anuncios no vistos
+    public function anunciosNoVistos()
+    {
+        return $this->anuncios()->wherePivot('visto', false);
+    }
+
+    // Obtener el conteo de anuncios no vistos
+    public function countAnunciosNoVistos(): int
+    {
+        return $this->anuncios()->wherePivot('visto', false)->count();
     }
 }

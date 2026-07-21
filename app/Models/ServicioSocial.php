@@ -24,12 +24,6 @@ class ServicioSocial extends Model
         'fecha_inicio',
         'fecha_limite_primer_informe',
         'fecha_limite_segundo_informe',
-        'reporte_parcial_subido',
-        'reporte_parcial_validado',
-        'reporte_final_subido',
-        'reporte_final_validado',
-        'archivo_parcial',
-        'archivo_final',
         'estatus',
         'horario_id',
         'grado_academico_jefe_id'
@@ -40,7 +34,6 @@ class ServicioSocial extends Model
         return $this->belongsTo(User::class);
     }
 
-    // RELACIONES AGREGADAS
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
@@ -66,61 +59,36 @@ class ServicioSocial extends Model
         return $this->morphMany(Comentario::class, 'comentable');
     }
 
-    /**
-     * Verifica si todos los documentos obligatorios están subidos
-     */
     public function documentosCompletos()
     {
-        // Documentos administrativos requeridos
         $documentosRequeridos = [
             'Solicitud de Servicio Social',
             'Elección de Modalidad',
             'Carta de Presentación de Servicio Social',
             'Carta de Aceptación',
             'Evaluación de Competencias del Desempeño',
-            'Carta de Liberación de Servicio Social'
+            'Carta de Liberación de Servicio Social',
+            'Primer Informe de Actividades Trimestral',
+            'Segundo Informe de Actividades Trimestral'
         ];
 
         $subidos = Documento::where('user_id', $this->user_id)
             ->where('activo', true)
             ->whereHas('tipoDocumento', function($q) use ($documentosRequeridos) {
-                $q->whereIn('nombre', $documentosRequeridos);
+                $q->whereIn('nombre', $documentosRequeridos)
+                  ->where('tramite', 'SS');
             })
             ->count();
 
-        // Informes requeridos
-        $informesSubidos = $this->reporte_parcial_subido && $this->reporte_final_subido;
-
-        return $subidos === count($documentosRequeridos) && $informesSubidos;
+        return $subidos === count($documentosRequeridos);
     }
 
     protected static function booted()
     {
-        static::updated(function ($servicioSocial) {
-            $servicioSocial->user->update([
-                'estatus_servicio_social' => $servicioSocial->estatus
-            ]);
-        });
-
-        static::created(function ($servicioSocial) {
-            $servicioSocial->user->update([
-                'estatus_servicio_social' => $servicioSocial->estatus
-            ]);
-        });
-
         static::deleted(function ($servicioSocial) {
             $servicioSocial->user->update([
                 'estatus_servicio_social' => 'no_solicitado'
             ]);
-        });
-
-        // Para cambios de estatus
-        static::updating(function ($servicioSocial) {
-            if ($servicioSocial->isDirty('estatus')) {
-                $servicioSocial->user()->update([
-                    'estatus_servicio_social' => $servicioSocial->estatus
-                ]);
-            }
         });
     }
 }

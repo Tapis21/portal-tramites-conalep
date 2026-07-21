@@ -1,0 +1,117 @@
+/* ========================================== */
+/* SELECTS - ESTILOS REUTILIZABLES */
+/* ========================================== */
+
+/* === Select base === */
+.select-conalep {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    color: var(--color-gray-700);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+.select-conalep:hover {
+    border-color: var(--color-primary-light);
+}
+
+.select-conalep:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15), var(--shadow-sm);
+}
+
+.select-conalep:disabled {
+    background-color: var(--color-gray-100);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* === Opciones del select === */
+.select-conalep option {
+    padding: 0.5rem 1rem;
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    font-size: var(--font-size-sm);
+}
+
+.select-conalep option:hover {
+    background-color: var(--color-primary-bg);
+    color: var(--color-primary);
+}
+
+.select-conalep option:checked {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.select-conalep option:disabled {
+    color: var(--color-gray-400);
+    font-style: italic;
+}
+
+/* === Contenedor del select con icono === */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrapper .select-icon {
+    position: absolute;
+    inset-block-start: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding-right: 0.75rem;
+    pointer-events: none;
+    color: var(--color-gray-400);
+    transition: color var(--transition-fast);
+}
+
+.select-wrapper:hover .select-icon {
+    color: var(--color-primary);
+}
+
+/* === Variantes === */
+.select-conalep-green {
+    border-color: var(--color-primary-border);
+}
+
+.select-conalep-green:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+
+.select-conalep-error {
+    border-color: var(--color-error);
+}
+
+.select-conalep-error:focus {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.select-conalep-sm {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+.select-conalep-lg {
+    padding: 1rem 3rem 1rem 1.25rem;
+    font-size: var(--font-size-base);
+}
+
+/* === Responsive === */
+@media (max-width: 640px) {
+    .select-conalep {
+        padding: 0.625rem 2.25rem 0.625rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+}
