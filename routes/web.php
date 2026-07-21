@@ -10,6 +10,7 @@ use App\Http\Controllers\SolicitudServicioSocialController;
 
 use App\Http\Controllers\PracticaController;
 use App\Http\Controllers\SolicitudPracticaController;
+use App\Http\Controllers\EmpresaController;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ImportController;
@@ -126,6 +127,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/servicio-social/{id}/validar-reporte-final', [ServicioSocialController::class, 'validarReporteFinal'])->name('admin.servicio-social.validar-reporte-final');
     Route::post('/admin/servicio-social/{id}/validar-ventanilla-reporte-final', [ServicioSocialController::class, 'validarVentanillaReporteFinal'])->name('admin.servicio-social.validar-ventanilla-reporte-final');
     Route::post('/admin/servicio-social/{id}/rechazar-reporte-final', [ServicioSocialController::class, 'rechazarReporteFinal'])->name('admin.servicio-social.rechazar-reporte-final');
+
+    // ==================== EMPRESAS (CONVENIOS) ====================
+    Route::get('/empresas', [App\Http\Controllers\EmpresaController::class, 'index'])->name('empresas.index');
 
     // ==================== RUTAS ADMIN PARA INFORMES (PRÁCTICAS) ====================
     Route::post('/admin/practicas/{id}/validar-reporte-parcial', [PracticaController::class, 'validarReporteParcial'])->name('admin.practicas.validar-reporte-parcial');

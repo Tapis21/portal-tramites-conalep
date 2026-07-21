@@ -141,8 +141,8 @@
         /* LEER IMPORTANTE - SIN PALO NEGRO Y SIN FONDO */
         /* ========================================== */
         .leer-box {
-            padding: 5px 10px;
-            margin: 4px 0 6px 10px;
+            padding: 5px 0px;
+            margin: 4px 0 6px 0px;
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 10pt;
             text-align: justify;
@@ -171,14 +171,14 @@
         }
 
         /* ========================================== */
-        /* DATOS - Arial 10pt (VALORES EN AZUL CON ARIAL) */
+        /* DATOS - Arial (VALORES EN AZUL CON ARIAL) */
         /* ========================================== */
         .field-row {
             margin: 2.5px 0;
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 10pt;
             color: #000000;
-            padding-left: 10px;
+            padding-left: 0px;
         }
 
         .field-label {
@@ -187,7 +187,7 @@
             color: #000000;
         }
 
-        /* 🔥 VALORES EN AZUL CON ARIAL */
+        /* 🔥 VALORES EN AZUL CON ARIAL (sin Arial MT) */
         .field-value {
             font-family: 'Arial', sans-serif;
             color: #003399;
@@ -221,14 +221,14 @@
         }
 
         /* ========================================== */
-        /* FECHAS - Arial 10pt (VALORES EN AZUL CON ARIAL) */
+        /* FECHAS - Arial (VALORES EN AZUL CON ARIAL) */
         /* ========================================== */
         .fecha-row {
             margin: 2.5px 0;
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 10pt;
             color: #000000;
-            padding-left: 10px;
+            padding-left: 0px;
         }
 
         .fecha-label {
@@ -237,7 +237,7 @@
             color: #000000;
         }
 
-        /* 🔥 VALORES EN AZUL CON ARIAL */
+        /* 🔥 VALORES EN AZUL CON ARIAL (sin Arial MT) */
         .fecha-value {
             font-family: 'Arial', sans-serif;
             color: #003399;
@@ -270,8 +270,8 @@
         /* LEER IMPORTANTE 2 - SIN PALO NEGRO Y SIN FONDO */
         /* ========================================== */
         .leer-box-2 {
-            padding: 5px 10px;
-            margin: 7px 0 5px 10px;
+            padding: 5px 0px;
+            margin: 7px 0 5px 0px;
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 10pt;
             text-align: justify;
@@ -293,7 +293,7 @@
             font-family: 'Arial MT', 'Arial', sans-serif;
             font-size: 10pt;
             color: #000000;
-            padding-left: 10px;
+            padding-left: 0px;
         }
 
         .datos-vertical .label {
@@ -304,7 +304,7 @@
             min-width: 180px;
         }
 
-        /* 🔥 VALORES EN AZUL CON ARIAL */
+        /* 🔥 VALORES EN AZUL CON ARIAL (sin Arial MT) */
         .datos-vertical .value {
             font-family: 'Arial', sans-serif;
             color: #003399;
@@ -340,7 +340,7 @@
 
         .signature-table .linea-firma {
             border-top: 1.5px solid #000000;
-            margin: 28px 0 4px;
+            margin: 50px 0 12px;
             width: 100%;
         }
 
@@ -498,7 +498,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- LEER IMPORTANTE 1 - SIN PALO NEGRO -->
+    <!-- LEER IMPORTANTE 1 - SIN PALO NEGRO Y SIN PADDING -->
     <!-- ========================================== -->
     <div class="leer-box">
         <strong>LEER, IMPORTANTE: </strong>
@@ -604,7 +604,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- LEER IMPORTANTE 2 - SIN PALO NEGRO -->
+    <!-- LEER IMPORTANTE 2 - SIN PALO NEGRO Y SIN PADDING -->
     <!-- ========================================== -->
     <div class="leer-box-2">
         <strong>LEER, IMPORTANTE: </strong>

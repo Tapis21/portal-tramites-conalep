@@ -95,6 +95,20 @@
                 @endif
             </a>
 
+            <!-- ========================================== -->
+            <!-- ✅ EMPRESAS / CONVENIOS (NUEVO) -->
+            <!-- ========================================== -->
+            <a href="{{ route('empresas.index') }}" 
+               class="group flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 relative overflow-hidden
+                      {{ request()->routeIs('empresas.*') ? 'text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                @if(request()->routeIs('empresas.*'))
+                    <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-green-600 rounded-r-full transition-all duration-300"></span>
+                @endif
+                <span class="iconify w-5 h-5 transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('empresas.*') ? 'text-green-700' : 'text-gray-400 group-hover:text-green-600' }}" 
+                      data-icon="mdi:handshake"></span>
+                <span class="text-sm transition-colors duration-200">Convenios</span>
+            </a>
+
             <!-- Separador -->
             <div class="my-3 border-t border-gray-200/60"></div>
 
@@ -230,6 +244,15 @@
                         {{ $badgePP }}
                     </span>
                 @endif
+            </a>
+
+            <!-- ========================================== -->
+            <!-- ✅ EMPRESAS / CONVENIOS (NUEVO EN MÓVIL) -->
+            <!-- ========================================== -->
+            <a href="{{ route('empresas.index') }}" onclick="toggleMobileMenu()" 
+               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 {{ request()->routeIs('empresas.*') ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                <span class="iconify w-5 h-5 {{ request()->routeIs('empresas.*') ? 'text-green-700' : 'text-gray-400' }}" data-icon="mdi:handshake"></span>
+                <span>Convenios</span>
             </a>
 
             <div class="my-3 border-t border-gray-200/60"></div>
