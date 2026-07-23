@@ -254,7 +254,7 @@ class UsersImport implements ToCollection, WithHeadingRow, SkipsOnError
 
     private function generarEmail($matricula)
     {
-        $matriculaLimpia = preg_replace('/[^a-zA-Z0-9]/', '', $matricula);
+        $matriculaLimpia = preg_replace('/[^a-zA-Z0-9-]/', '', $matricula);
         return strtolower($matriculaLimpia) . '@conalepqroo.edu.mx';
     }
 

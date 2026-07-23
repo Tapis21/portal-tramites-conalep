@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -14,6 +14,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
+use App\Models\Periodo;
 
 class ServicioSocialsTable
 {
@@ -30,50 +31,87 @@ class ServicioSocialsTable
                     ->with('servicioSocial')
                     ->with('periodos')
             )
+            // ================================================================
+            // 📋 ESTILOS GENERALES DE LA TABLA
+            // ================================================================
+            ->extraAttributes([
+                'style' => 'border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'
+            ])
             ->columns([
+                // ================================================================
+                // 👤 ESTUDIANTE
+                // ================================================================
                 TextColumn::make('name')
                     ->label('Estudiante')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(fn ($record) => $record->name . ' ' . $record->apellidos)
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ])
-                    ->tooltip(fn ($record) => !$record->periodos()->exists()
-                        ? '⚠️ Este usuario no tiene periodo asignado'
-                        : ''
-                    ),
+                    ->formatStateUsing(function ($record) {
+                        return $record->name . ' ' . $record->apellidos;
+                    })
+                    ->icon('heroicon-o-user')
+                    ->iconColor('gray')
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return [
+                                'style' => 'border-left: 4px solid #f59e0b; background-color: #fef9c3; font-weight: 500;'
+                            ];
+                        }
+                        return ['style' => 'font-weight: 500;'];
+                    })
+                    ->tooltip(function ($record) {
+                        return !$record->periodos()->exists() ? '⚠️ Este usuario no tiene periodo asignado' : '';
+                    }),
 
+                // ================================================================
+                // 🎓 MATRÍCULA
+                // ================================================================
                 TextColumn::make('matricula')
                     ->label('Matrícula')
                     ->searchable()
                     ->sortable()
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->copyable()
+                    ->copyMessage('Matrícula copiada')
+                    ->icon('heroicon-o-identification')
+                    ->iconColor('gray')
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3; font-family: monospace;'];
+                        }
+                        return ['style' => 'font-family: monospace;'];
+                    }),
 
+                // ================================================================
+                // 📚 GRUPO
+                // ================================================================
                 TextColumn::make('grupo')
                     ->label('Grupo')
                     ->searchable()
                     ->sortable()
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->badge()
+                    ->color('gray')
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
 
-                BadgeColumn::make('estatus_servicio_social')
+                // ================================================================
+                // 📊 ESTATUS
+                // ================================================================
+                TextColumn::make('estatus_servicio_social')
                     ->label('Estatus')
-                    ->colors([
-                        'success' => 'liberado',
-                        'warning' => 'pendiente_revision',
-                        'info' => 'en_progreso',
-                        'gray' => 'no_solicitado',
-                    ])
+                    ->badge()
+                    ->color(function ($state, $record) {
+                        $estatus = $record->servicioSocial?->estatus ?? 'no_solicitado';
+                        return match ($estatus) {
+                            'liberado' => 'success',
+                            'pendiente_revision' => 'warning',
+                            'en_progreso' => 'info',
+                            'pendiente' => 'warning',
+                            default => 'gray',
+                        };
+                    })
                     ->formatStateUsing(function ($state, $record) {
                         if ($record->servicioSocial) {
                             $estatus = $record->servicioSocial->estatus;
@@ -87,58 +125,100 @@ class ServicioSocialsTable
                         }
                         return '📋 No solicitado';
                     })
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->icon(function ($record) {
+                        $estatus = $record->servicioSocial?->estatus ?? 'no_solicitado';
+                        return match ($estatus) {
+                            'liberado' => 'heroicon-o-check-circle',
+                            'pendiente_revision' => 'heroicon-o-clock',
+                            'en_progreso' => 'heroicon-o-arrow-path',
+                            'pendiente' => 'heroicon-o-clock',
+                            default => 'heroicon-o-plus-circle',
+                        };
+                    })
+                    ->iconColor(function ($record) {
+                        $estatus = $record->servicioSocial?->estatus ?? 'no_solicitado';
+                        return match ($estatus) {
+                            'liberado' => 'success',
+                            'pendiente_revision' => 'warning',
+                            'en_progreso' => 'info',
+                            'pendiente' => 'warning',
+                            default => 'gray',
+                        };
+                    })
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
 
+                // ================================================================
+                // 🏢 EMPRESA
+                // ================================================================
                 TextColumn::make('servicioSocial.empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable()
                     ->placeholder('—')
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->icon('heroicon-o-building-office')
+                    ->iconColor('gray')
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
 
+                // ================================================================
+                // 📅 INICIO
+                // ================================================================
                 TextColumn::make('servicioSocial.fecha_inicio')
                     ->label('Inicio')
                     ->date('d/m/Y')
                     ->sortable()
                     ->placeholder('—')
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->icon('heroicon-o-calendar')
+                    ->iconColor('gray')
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
 
+                // ================================================================
+                // 📅 FINALIZA
+                // ================================================================
                 TextColumn::make('servicioSocial.fecha_limite_segundo_informe')
                     ->label('Finaliza')
                     ->date('d/m/Y')
                     ->sortable()
                     ->placeholder('—')
-                    ->color(function ($record) {
-                        if (!$record->servicioSocial) {
-                            return 'gray';
-                        }
+                    ->icon('heroicon-o-calendar-days')
+                    ->iconColor(function ($record) {
+                        if (!$record->servicioSocial) return 'gray';
                         $dias = Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe);
-                        if ($dias <= 7) {
-                            return 'danger';
-                        }
-                        if ($dias <= 15) {
-                            return 'warning';
-                        }
+                        if ($dias <= 7) return 'danger';
+                        if ($dias <= 15) return 'warning';
                         return 'success';
                     })
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->color(function ($record) {
+                        if (!$record->servicioSocial) return 'gray';
+                        $dias = Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe);
+                        if ($dias <= 7) return 'danger';
+                        if ($dias <= 15) return 'warning';
+                        return 'success';
+                    })
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
 
+                // ================================================================
+                // ⏱️ TIEMPO
+                // ================================================================
                 TextColumn::make('tiempo')
                     ->label('Tiempo')
                     ->state(function ($record) {
@@ -155,37 +235,91 @@ class ServicioSocialsTable
                     })
                     ->badge()
                     ->color(function ($state, $record) {
-                        if ($state === '—') {
-                            return 'gray';
-                        }
-                        if ($state === '✅ Finalizado') {
-                            return 'success';
-                        }
+                        if ($state === '—') return 'gray';
+                        if ($state === '✅ Finalizado') return 'success';
                         
                         $dias = intval(preg_replace('/[^0-9-]/', '', $state));
                         
-                        if ($dias <= 7 && $dias >= 0) {
-                            return 'danger';
-                        } elseif ($dias <= 15 && $dias >= 0) {
-                            return 'warning';
-                        } elseif ($dias < 0) {
-                            return 'danger';
-                        } else {
-                            return 'success';
-                        }
+                        if ($dias <= 7 && $dias >= 0) return 'danger';
+                        if ($dias <= 15 && $dias >= 0) return 'warning';
+                        if ($dias < 0) return 'danger';
+                        return 'success';
                     })
-                    ->extraAttributes(fn ($record) => [
-                        'style' => !$record->periodos()->exists()
-                            ? 'background-color: #fef9c3;'
-                            : '',
-                    ]),
+                    ->icon(function ($state, $record) {
+                        if ($state === '—') return 'heroicon-o-minus-circle';
+                        if ($state === '✅ Finalizado') return 'heroicon-o-check-circle';
+                        return 'heroicon-o-clock';
+                    })
+                    ->extraAttributes(function ($record) {
+                        if (!$record->periodos()->exists()) {
+                            return ['style' => 'background-color: #fef9c3;'];
+                        }
+                        return [];
+                    }),
             ])
+            // ================================================================
+            // 🔍 FILTROS
+            // ================================================================
+            ->filters([
+                SelectFilter::make('estatus_servicio_social')
+                    ->label('Estatus de SS')
+                    ->options([
+                        'no_solicitado' => '📋 No solicitado',
+                        'pendiente' => '⏳ Pendiente',
+                        'en_progreso' => '🔄 En progreso',
+                        'pendiente_revision' => '⚠️ En revisión',
+                        'liberado' => '✅ Liberado',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if ($data['value'] === 'no_solicitado') {
+                            $query->whereDoesntHave('servicioSocial');
+                        } else {
+                            $query->whereHas('servicioSocial', function ($q) use ($data) {
+                                $q->where('estatus', $data['value']);
+                            });
+                        }
+                    }),
+
+                // ✅ FILTRO POR GENERACIÓN (antes "Periodo") - SOLO ÚLTIMOS 3
+                SelectFilter::make('generacion')
+                    ->label('Generación')
+                    ->options(function () {
+                        return Periodo::orderBy('año_inicio', 'desc')
+                            ->limit(3)
+                            ->pluck('nombre', 'id')
+                            ->toArray();
+                    })
+                    ->query(function ($query, array $data) {
+                        if (!empty($data['value'])) {
+                            $query->whereHas('periodos', function ($q) use ($data) {
+                                $q->where('periodo_id', $data['value']);
+                            });
+                        }
+                    }),
+
+                SelectFilter::make('sin_periodo')
+                    ->label('⚠️ Sin periodo')
+                    ->options([
+                        '1' => 'Mostrar sin periodo',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if ($data['value'] === '1') {
+                            $query->whereDoesntHave('periodos');
+                        }
+                    }),
+            ])
+            // ================================================================
+            // 🛠️ ACCIONES
+            // ================================================================
             ->actions([
                 Action::make('solicitar_ss')
                     ->label('Solicitar SS')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
-                    ->visible(fn ($record) => !$record->servicioSocial)
+                    ->visible(function ($record) {
+                        return !$record->servicioSocial;
+                    })
+                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
                     ->modalHeading('Solicitar Servicio Social')
                     ->modalDescription('Completa los datos para crear la solicitud de Servicio Social')
                     ->modalSubmitActionLabel('Crear solicitud')
@@ -364,7 +498,10 @@ class ServicioSocialsTable
                     ->label('Eliminar solicitud')
                     ->icon('heroicon-o-trash')
                     ->color('danger')
-                    ->visible(fn ($record) => $record->servicioSocial && in_array($record->servicioSocial->estatus, ['pendiente', 'en_progreso']))
+                    ->visible(function ($record) {
+                        return $record->servicioSocial && in_array($record->servicioSocial->estatus, ['pendiente', 'en_progreso']);
+                    })
+                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
                     ->modalHeading('Eliminar solicitud de Servicio Social')
                     ->modalDescription('¿Estás seguro de que deseas eliminar esta solicitud? Se eliminarán también todos los documentos y comentarios asociados. Esta acción no se puede deshacer.')
                     ->modalSubmitActionLabel('Sí, eliminar todo')
@@ -412,15 +549,25 @@ class ServicioSocialsTable
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
-                    ->url(fn ($record) => route('filament.admin.resources.servicio-socials.view', $record)),
+                    ->url(function ($record) {
+                        return route('filament.admin.resources.servicio-socials.view', $record);
+                    })
+                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;']),
             ])
+            // ================================================================
+            // 📊 CONFIGURACIÓN DE LA TABLA
+            // ================================================================
             ->defaultSort('name')
             ->striped()
             ->paginated([25, 50, 100])
             ->emptyStateHeading('No hay alumnos registrados')
-            ->emptyStateDescription('Aún no hay alumnos en el sistema. Importa alumnos desde el módulo de Importación Masiva.');
+            ->emptyStateDescription('Aún no hay alumnos en el sistema. Importa alumnos desde el módulo de Importación Masiva.')
+            ->emptyStateIcon('heroicon-o-user-group');
     }
 
+    // ================================================================
+    // 🔧 FUNCIONES AUXILIARES
+    // ================================================================
     protected static function ajustarInicio(Carbon $fecha): Carbon
     {
         $diaSemana = $fecha->dayOfWeek;
