@@ -32,12 +32,8 @@ class PracticasTable
                     ->with('periodos')
                     ->with('servicioSocial')
             )
-            // ================================================================
-            // 📋 ESTILOS GENERALES DE LA TABLA
-            // ================================================================
-            ->extraAttributes([
-                'style' => 'border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'
-            ])
+            // ✅ HABILITAR SELECCIÓN (CHECKBOXES)
+            ->selectable()
             ->columns([
                 // ================================================================
                 // 👤 ESTUDIANTE
@@ -53,11 +49,9 @@ class PracticasTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return [
-                                'style' => 'border-left: 4px solid #f59e0b; background-color: #fef9c3; font-weight: 500;'
-                            ];
+                            return ['class' => 'sin-periodo'];
                         }
-                        return ['style' => 'font-weight: 500;'];
+                        return [];
                     })
                     ->tooltip(function ($record) {
                         return !$record->periodos()->exists() ? '⚠️ Este usuario no tiene periodo asignado' : '';
@@ -76,9 +70,9 @@ class PracticasTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3; font-family: monospace;'];
+                            return ['class' => 'sin-periodo'];
                         }
-                        return ['style' => 'font-family: monospace;'];
+                        return [];
                     }),
 
                 // ================================================================
@@ -92,7 +86,7 @@ class PracticasTable
                     ->color('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -148,7 +142,7 @@ class PracticasTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -165,7 +159,7 @@ class PracticasTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -182,7 +176,7 @@ class PracticasTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -212,7 +206,15 @@ class PracticasTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
+                        }
+                        if ($record->practicas) {
+                            $dias = Carbon::now()->diffInDays($record->practicas->fecha_limite_final);
+                            if ($dias <= 7) {
+                                return ['class' => 'por-vencer'];
+                            } elseif ($dias < 0) {
+                                return ['class' => 'vencido'];
+                            }
                         }
                         return [];
                     }),
@@ -253,7 +255,7 @@ class PracticasTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -281,7 +283,6 @@ class PracticasTable
                         }
                     }),
 
-                // ✅ FILTRO POR GENERACIÓN (antes "Periodo") - SOLO ÚLTIMOS 3
                 SelectFilter::make('generacion')
                     ->label('Generación')
                     ->options(function () {
@@ -329,7 +330,7 @@ class PracticasTable
 
                         return true;
                     })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
+                    ->extraAttributes(['class' => 'action-btn success-btn'])
                     ->tooltip(function ($record) {
                         $ss = $record->servicioSocial;
                         if (!$ss) {
@@ -529,7 +530,7 @@ class PracticasTable
                     ->visible(function ($record) {
                         return $record->practicas && in_array($record->practicas->estatus, ['pendiente', 'en_progreso']);
                     })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
+                    ->extraAttributes(['class' => 'action-btn danger-btn'])
                     ->modalHeading('Eliminar solicitud de Prácticas Profesionales')
                     ->modalDescription('¿Estás seguro de que deseas eliminar esta solicitud? Se eliminarán también todos los documentos y comentarios asociados. Esta acción no se puede deshacer.')
                     ->modalSubmitActionLabel('Sí, eliminar todo')
@@ -574,10 +575,52 @@ class PracticasTable
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
+                    ->extraAttributes(['class' => 'action-btn info-btn'])
                     ->url(function ($record) {
                         return route('filament.admin.resources.practicas.view', $record);
-                    })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;']),
+                    }),
+            ])
+            // ✅ BULK ACTIONS (ELIMINAR SOLICITUDES SELECCIONADAS)
+            ->bulkActions([
+                Action::make('eliminar_solicitudes_seleccionadas')
+                    ->label('Eliminar solicitudes seleccionadas')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->extraAttributes(['class' => 'bulk-action-btn'])
+                    ->requiresConfirmation()
+                    ->modalHeading('Eliminar solicitudes de PP')
+                    ->modalDescription('¿Estás seguro de eliminar las solicitudes de Prácticas Profesionales de los alumnos seleccionados? Esta acción no se puede deshacer.')
+                    ->modalSubmitActionLabel('Sí, eliminar todo')
+                    ->modalCancelActionLabel('Cancelar')
+                    ->action(function ($records) {
+                        $count = 0;
+                        foreach ($records as $user) {
+                            if ($user->practicas) {
+                                $practicas = $user->practicas;
+                                $documentos = $practicas->documentos ?? collect();
+                                
+                                foreach ($documentos as $documento) {
+                                    $documento->comentarios()->delete();
+                                    if ($documento->archivo_pdf && Storage::exists($documento->archivo_pdf)) {
+                                        Storage::delete($documento->archivo_pdf);
+                                    }
+                                    $documento->delete();
+                                }
+                                
+                                $practicas->comentarios()->delete();
+                                $practicas->delete();
+                                
+                                $user->update(['estatus_practicas' => 'no_solicitado']);
+                                $count++;
+                            }
+                        }
+                        
+                        Notification::make()
+                            ->title('🗑️ Solicitudes eliminadas')
+                            ->body("Se eliminaron {$count} solicitudes de Prácticas Profesionales correctamente.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             // ================================================================
             // 📊 CONFIGURACIÓN DE LA TABLA

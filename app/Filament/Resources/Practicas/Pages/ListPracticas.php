@@ -10,6 +10,9 @@ class ListPracticas extends ListRecords
 {
     protected static string $resource = PracticaResource::class;
 
+    // 👇 USAR EL BLADE PERSONALIZADO
+    protected string $view = 'filament.resources.practicas.pages.list-practicas';
+
     protected function getHeaderActions(): array
     {
         return [
