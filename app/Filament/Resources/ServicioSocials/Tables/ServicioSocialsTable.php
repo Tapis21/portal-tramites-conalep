@@ -31,12 +31,8 @@ class ServicioSocialsTable
                     ->with('servicioSocial')
                     ->with('periodos')
             )
-            // ================================================================
-            // 📋 ESTILOS GENERALES DE LA TABLA
-            // ================================================================
-            ->extraAttributes([
-                'style' => 'border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'
-            ])
+            // ✅ HABILITAR SELECCIÓN (CHECKBOXES)
+            ->selectable()
             ->columns([
                 // ================================================================
                 // 👤 ESTUDIANTE
@@ -52,11 +48,9 @@ class ServicioSocialsTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return [
-                                'style' => 'border-left: 4px solid #f59e0b; background-color: #fef9c3; font-weight: 500;'
-                            ];
+                            return ['class' => 'sin-periodo'];
                         }
-                        return ['style' => 'font-weight: 500;'];
+                        return [];
                     })
                     ->tooltip(function ($record) {
                         return !$record->periodos()->exists() ? '⚠️ Este usuario no tiene periodo asignado' : '';
@@ -75,9 +69,9 @@ class ServicioSocialsTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3; font-family: monospace;'];
+                            return ['class' => 'sin-periodo'];
                         }
-                        return ['style' => 'font-family: monospace;'];
+                        return [];
                     }),
 
                 // ================================================================
@@ -91,7 +85,7 @@ class ServicioSocialsTable
                     ->color('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -147,7 +141,7 @@ class ServicioSocialsTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -164,7 +158,7 @@ class ServicioSocialsTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -181,7 +175,7 @@ class ServicioSocialsTable
                     ->iconColor('gray')
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -211,7 +205,15 @@ class ServicioSocialsTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
+                        }
+                        if ($record->servicioSocial) {
+                            $dias = Carbon::now()->diffInDays($record->servicioSocial->fecha_limite_segundo_informe);
+                            if ($dias <= 7) {
+                                return ['class' => 'por-vencer'];
+                            } elseif ($dias < 0) {
+                                return ['class' => 'vencido'];
+                            }
                         }
                         return [];
                     }),
@@ -252,7 +254,7 @@ class ServicioSocialsTable
                     })
                     ->extraAttributes(function ($record) {
                         if (!$record->periodos()->exists()) {
-                            return ['style' => 'background-color: #fef9c3;'];
+                            return ['class' => 'sin-periodo'];
                         }
                         return [];
                     }),
@@ -280,7 +282,6 @@ class ServicioSocialsTable
                         }
                     }),
 
-                // ✅ FILTRO POR GENERACIÓN (antes "Periodo") - SOLO ÚLTIMOS 3
                 SelectFilter::make('generacion')
                     ->label('Generación')
                     ->options(function () {
@@ -319,7 +320,7 @@ class ServicioSocialsTable
                     ->visible(function ($record) {
                         return !$record->servicioSocial;
                     })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
+                    ->extraAttributes(['class' => 'action-btn success-btn'])
                     ->modalHeading('Solicitar Servicio Social')
                     ->modalDescription('Completa los datos para crear la solicitud de Servicio Social')
                     ->modalSubmitActionLabel('Crear solicitud')
@@ -501,7 +502,7 @@ class ServicioSocialsTable
                     ->visible(function ($record) {
                         return $record->servicioSocial && in_array($record->servicioSocial->estatus, ['pendiente', 'en_progreso']);
                     })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'])
+                    ->extraAttributes(['class' => 'action-btn danger-btn'])
                     ->modalHeading('Eliminar solicitud de Servicio Social')
                     ->modalDescription('¿Estás seguro de que deseas eliminar esta solicitud? Se eliminarán también todos los documentos y comentarios asociados. Esta acción no se puede deshacer.')
                     ->modalSubmitActionLabel('Sí, eliminar todo')
@@ -510,30 +511,21 @@ class ServicioSocialsTable
                         $servicioSocial = $record->servicioSocial;
                         $nombreEstudiante = $record->name;
                         
-                        // 1. Obtener documentos del servicio
                         $documentos = $servicioSocial->documentos ?? collect();
                         
-                        // 2. Eliminar documentos y sus comentarios
                         foreach ($documentos as $documento) {
-                            // Eliminar comentarios del documento
                             $documento->comentarios()->delete();
                             
-                            // Eliminar archivo físico
                             if ($documento->archivo_pdf && Storage::exists($documento->archivo_pdf)) {
                                 Storage::delete($documento->archivo_pdf);
                             }
                             
-                            // Eliminar el documento
                             $documento->delete();
                         }
                         
-                        // 3. Eliminar comentarios directos del servicio
                         $servicioSocial->comentarios()->delete();
-                        
-                        // 4. Eliminar el servicio
                         $servicioSocial->delete();
                         
-                        // 5. Actualizar estatus del usuario
                         $record->update([
                             'estatus_servicio_social' => 'no_solicitado'
                         ]);
@@ -549,10 +541,54 @@ class ServicioSocialsTable
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
+                    ->extraAttributes(['class' => 'action-btn info-btn'])
                     ->url(function ($record) {
                         return route('filament.admin.resources.servicio-socials.view', $record);
-                    })
-                    ->extraAttributes(['style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;']),
+                    }),
+            ])
+            // ================================================================
+            // 📋 BULK ACTIONS (ELIMINAR SOLICITUDES SELECCIONADAS)
+            // ================================================================
+            ->bulkActions([
+                Action::make('eliminar_solicitudes_seleccionadas')
+                    ->label('Eliminar solicitudes seleccionadas')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->extraAttributes(['class' => 'bulk-action-btn'])
+                    ->requiresConfirmation()
+                    ->modalHeading('Eliminar solicitudes de SS')
+                    ->modalDescription('¿Estás seguro de eliminar las solicitudes de Servicio Social de los alumnos seleccionados? Esta acción no se puede deshacer.')
+                    ->modalSubmitActionLabel('Sí, eliminar todo')
+                    ->modalCancelActionLabel('Cancelar')
+                    ->action(function ($records) {
+                        $count = 0;
+                        foreach ($records as $user) {
+                            if ($user->servicioSocial) {
+                                $servicioSocial = $user->servicioSocial;
+                                $documentos = $servicioSocial->documentos ?? collect();
+                                
+                                foreach ($documentos as $documento) {
+                                    $documento->comentarios()->delete();
+                                    if ($documento->archivo_pdf && Storage::exists($documento->archivo_pdf)) {
+                                        Storage::delete($documento->archivo_pdf);
+                                    }
+                                    $documento->delete();
+                                }
+                                
+                                $servicioSocial->comentarios()->delete();
+                                $servicioSocial->delete();
+                                
+                                $user->update(['estatus_servicio_social' => 'no_solicitado']);
+                                $count++;
+                            }
+                        }
+                        
+                        Notification::make()
+                            ->title('🗑️ Solicitudes eliminadas')
+                            ->body("Se eliminaron {$count} solicitudes de Servicio Social correctamente.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             // ================================================================
             // 📊 CONFIGURACIÓN DE LA TABLA

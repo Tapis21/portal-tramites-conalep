@@ -10,6 +10,8 @@ class ListServicioSocials extends ListRecords
 {
     protected static string $resource = ServicioSocialResource::class;
 
+    protected string $view = 'filament.resources.servicio-socials.pages.list-servicio-socials';
+
     protected function getHeaderActions(): array
     {
         return [
