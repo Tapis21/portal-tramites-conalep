@@ -456,7 +456,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
                     ->with(['tipoDocumento', 'comentarios.user'])
             )
-            // 👇 CLASE PARA ESTILIZAR LA TABLA
+            
             ->extraAttributes(['class' => 'documents-table'])
             ->columns([
                 TextColumn::make('tipoDocumento.nombre')

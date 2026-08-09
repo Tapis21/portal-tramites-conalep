@@ -16,7 +16,6 @@ class Anuncio extends Model
         return $this->belongsTo(User::class, 'admin_id');
     }
 
-    // Relación con usuarios a través de anuncio_user (vistos)
     public function usuarios()
     {
         return $this->belongsToMany(User::class, 'anuncio_user')
@@ -24,7 +23,6 @@ class Anuncio extends Model
                     ->withTimestamps();
     }
 
-    // Verificar si un usuario específico ha visto este anuncio
     public function vistoPor(User $user): bool
     {
         return $this->usuarios()
@@ -33,11 +31,16 @@ class Anuncio extends Model
                     ->exists();
     }
 
-    // Marcar como visto por un usuario
     public function marcarComoVisto(User $user): void
     {
         $this->usuarios()->syncWithoutDetaching([
             $user->id => ['visto' => true, 'visto_at' => now()]
         ]);
+    }
+
+    // Scope para obtener anuncios recientes (usando created_at)
+    public function scopeRecientes($query)
+    {
+        return $query->orderBy('created_at', 'desc');
     }
 }
