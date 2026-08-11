@@ -19,6 +19,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select as FormSelect;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 
 class ServicioSocialResource extends Resource
@@ -62,45 +63,70 @@ class ServicioSocialResource extends Resource
 
         // ✅ HEADER ACTIONS (FILTRO + CREAR PERIODO)
         $table->headerActions([
-            // 📅 FILTRO POR PERIODO
+            // 📅 FILTRO POR GENERACIÓN (MODAL MEJORADO)
             Action::make('filtrar_periodo')
-                ->label('Filtrar por Periodo') // ✅ Sin emoji en label
-                ->icon('heroicon-o-funnel') // ✅ Icono de Heroicon
+                ->label('Filtrar por Generación')
+                ->icon('heroicon-o-funnel')
                 ->color('primary')
+                ->extraAttributes(['class' => 'filter-action'])
+                ->modalHeading('🔍 Filtrar por Generación')
+                ->modalDescription('Selecciona una generación para filtrar los alumnos.')
+                ->modalWidth('lg')
                 ->form([
+                    // 📌 SELECT DE GENERACIÓN (CON COLORES Y CONTADOR)
                     FormSelect::make('periodo_id')
-                        ->label('Selecciona un periodo para filtrar los alumnos')
-                        ->options(
-                            Periodo::orderBy('año_inicio', 'desc')
-                                ->get()
+                        ->label('Selecciona una generación')
+                        ->native(false)
+                        ->allowHtml()
+                        ->options(function ($get) {
+                            $mostrarTodas = $get('mostrar_todas');
+                            $query = Periodo::orderBy('año_inicio', 'desc');
+                            
+                            if (!$mostrarTodas) {
+                                $query->limit(3);
+                            }
+                            
+                            return $query->get()
                                 ->mapWithKeys(function ($periodo) {
-                                    $label = $periodo->nombre;
-                                    if ($periodo->activo) {
-                                        $label .= ' ✅ (Activo)';
-                                    } else {
-                                        $label .= ' ❌ (Inactivo)';
-                                    }
+                                    $color = $periodo->activo ? '#10b981' : '#ef4444';
+                                    $status = $periodo->activo ? '● Activo' : '● Inactivo';
+                                    $label = "<span style='color: {$color}; font-weight: 600;'>{$status}</span> {$periodo->nombre}";
+                                    
                                     $count = User::whereHas('periodos', function ($q) use ($periodo) {
                                         $q->where('periodo_id', $periodo->id);
                                     })->count();
-                                    $label .= " ($count alumnos)";
+                                    
+                                    $label .= " <span style='color: #6b7280; font-size: 0.75rem;'>({$count} alumno" . ($count != 1 ? 's' : '') . ")</span>";
+                                    
                                     return [$periodo->id => $label];
                                 })
-                                ->toArray()
-                        )
-                        ->placeholder('Mostrar todos los periodos') // ✅ Sin emoji
-                        ->default(request()->get('periodo_id') ?? session('periodo_id_servicio_social', null))
+                                ->toArray();
+                        })
+                        ->placeholder('Selecciona una generación')
                         ->searchable()
-                        ->native(false),
+                        ->extraAttributes(['class' => 'filter-select-with-colors'])
+                        ->helperText('Selecciona la generación que deseas filtrar.'),
+
+                    // 📌 TOGGLE "MOSTRAR TODAS"
+                    Toggle::make('mostrar_todas')
+                        ->label('Mostrar todas las generaciones')
+                        ->default(false)
+                        ->live()
+                        ->afterStateUpdated(function ($state, $set, $get) {
+                            $set('periodo_id', null);
+                        })
+                        ->helperText('Activa esta opción para ver todas las generaciones disponibles.')
+                        ->extraAttributes(['class' => 'filter-toggle']),
                 ])
                 ->action(function (array $data) {
                     session(['periodo_id_servicio_social' => $data['periodo_id']]);
+                    session(['mostrar_todas_generaciones' => $data['mostrar_todas'] ?? false]);
                     
                     if ($data['periodo_id']) {
                         $periodo = Periodo::find($data['periodo_id']);
                         Notification::make()
                             ->title('✅ Filtro aplicado')
-                            ->body("Mostrando alumnos del periodo: {$periodo->nombre}")
+                            ->body("Mostrando alumnos de la generación: {$periodo->nombre}")
                             ->success()
                             ->send();
                     } else {
@@ -117,14 +143,16 @@ class ServicioSocialResource extends Resource
                 })
                 ->modalSubmitActionLabel('Aplicar filtro')
                 ->modalCancelActionLabel('Cancelar')
-                ->modalWidth('md')
+                ->modalWidth('lg')
                 ->extraModalFooterActions([
                     Action::make('reset_filtro')
-                        ->label('Resetear filtro') // ✅ Sin emoji en label
-                        ->icon('heroicon-o-arrow-path') // ✅ Icono de Heroicon
+                        ->label('Resetear filtro')
+                        ->icon('heroicon-o-arrow-path')
                         ->color('danger')
+                        ->extraAttributes(['class' => 'reset-filter-btn'])
                         ->action(function () {
                             session()->forget('periodo_id_servicio_social');
+                            session()->forget('mostrar_todas_generaciones');
                             Notification::make()
                                 ->title('🔄 Filtro reseteado')
                                 ->body('Mostrando TODOS los alumnos')
@@ -134,11 +162,12 @@ class ServicioSocialResource extends Resource
                         }),
                 ]),
 
-            // ✅ BOTÓN: CREAR PERIODO
+            // ✅ BOTÓN: CREAR GENERACIÓN
             Action::make('crear_periodo')
-                ->label('Crear periodo') // ✅ Sin emoji en label
-                ->icon('heroicon-o-plus-circle') // ✅ Icono de Heroicon
+                ->label('Crear generación')
+                ->icon('heroicon-o-plus-circle')
                 ->color('success')
+                ->extraAttributes(['class' => 'create-period-btn'])
                 ->url('/admin/periodos/create')
                 ->openUrlInNewTab(false),
         ]);
@@ -152,7 +181,7 @@ class ServicioSocialResource extends Resource
         if ($periodoId) {
             $periodo = Periodo::find($periodoId);
             if ($periodo) {
-                $table->heading("📌 Mostrando alumnos del periodo: {$periodo->nombre}");
+                $table->heading("📌 Mostrando alumnos de la generación: {$periodo->nombre}");
                 
                 $table->modifyQueryUsing(function ($query) use ($periodoId) {
                     $query->whereHas('periodos', function ($sq) use ($periodoId) {

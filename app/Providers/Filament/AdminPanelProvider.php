@@ -46,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 \App\Filament\Widgets\EstadisticasGenerales::class,
+                \App\Filament\Widgets\AnunciosWidget::class,
                 \App\Filament\Widgets\SolicitudesPendientesSS::class,
                 \App\Filament\Widgets\SolicitudesPendientesPP::class,
                 \App\Filament\Widgets\ProximasFinalizacionesSS::class,
@@ -66,9 +67,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // ================================================================
-            // 📋 NAVIGATION GROUPS (SECCIONES DEL MENÚ)
-            // ================================================================
             ->navigationGroups([
                 NavigationGroup::make()
                     ->label('📋 General')
@@ -81,13 +79,15 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(false),
 
                 NavigationGroup::make()
+                    ->label('📣 Comunicación')
+                    ->collapsible(true)
+                    ->collapsed(false),
+
+                NavigationGroup::make()
                     ->label('⚙️ Configuración')
                     ->collapsible(true)
                     ->collapsed(false),
             ])
-            // ================================================================
-            // 🚀 ELIMINADO: El Dashboard se muestra automáticamente
-            // ================================================================
-            ->navigationItems([]); // ✅ Vacío para que solo se muestren los Resources y el Dashboard automático
+            ->navigationItems([]);
     }
 }

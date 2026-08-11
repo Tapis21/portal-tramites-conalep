@@ -55,8 +55,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
     {
         return $schema
             ->schema([
+                // ================================================================
+                // 👤 DATOS DEL ESTUDIANTE
+                // ================================================================
                 Section::make('Datos del Estudiante')
                     ->icon('heroicon-o-user-group')
+                    ->extraAttributes(['class' => 'info-section info-section-student'])
                     ->schema([
                         TextEntry::make('name')
                             ->label('Nombre completo')
@@ -83,8 +87,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
+                // ================================================================
+                // 🏢 DATOS DE LA EMPRESA
+                // ================================================================
                 Section::make('Datos de la Empresa')
                     ->icon('heroicon-o-building-office-2')
+                    ->extraAttributes(['class' => 'info-section info-section-company'])
                     ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
                         TextEntry::make('servicioSocial.empresa.nombre')
@@ -98,8 +106,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(2),
 
+                // ================================================================
+                // ⚠️ SIN SOLICITUD
+                // ================================================================
                 Section::make('Sin Solicitud de Servicio Social')
                     ->icon('heroicon-o-information-circle')
+                    ->extraAttributes(['class' => 'info-section info-section-empty'])
                     ->visible(fn () => $this->getServicioSocial() === null)
                     ->schema([
                         TextEntry::make('sin_solicitud')
@@ -108,8 +120,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                             ->icon('heroicon-o-exclamation-circle'),
                     ]),
 
+                // ================================================================
+                // 📅 FECHAS Y HORAS
+                // ================================================================
                 Section::make('Fechas y Horas')
                     ->icon('heroicon-o-calendar-days')
+                    ->extraAttributes(['class' => 'info-section info-section-dates'])
                     ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
                         TextEntry::make('servicioSocial.fecha_inicio')
@@ -142,8 +158,12 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
+                // ================================================================
+                // 📞 DATOS DE CONTACTO
+                // ================================================================
                 Section::make('Datos de Contacto')
                     ->icon('heroicon-o-phone')
+                    ->extraAttributes(['class' => 'info-section info-section-contact'])
                     ->visible(fn () => $this->getServicioSocial() !== null)
                     ->schema([
                         TextEntry::make('servicioSocial.gradoAcademico.abreviatura')
@@ -173,14 +193,19 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ])
                     ->columns(3),
 
+                // ================================================================
+                // ℹ️ INFORMACIÓN ADICIONAL
+                // ================================================================
                 Section::make('Información Adicional')
                     ->icon('heroicon-o-information-circle')
+                    ->extraAttributes(['class' => 'info-section info-section-additional'])
                     ->visible(fn () => $this->getServicioSocial() !== null)
                     ->footerActions([
                         Actions\Action::make('cambiar_estatus_estudiante')
                             ->label('Cambiar Estatus')
                             ->icon('heroicon-o-pencil-square')
                             ->color('primary')
+                            ->extraAttributes(['class' => 'action-btn primary-btn'])
                             ->visible(fn () => Auth::user()->role === 'admin')
                             ->form([
                                 Select::make('nuevo_estatus_estudiante')
@@ -431,11 +456,14 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->whereHas('tipoDocumento', fn($q) => $q->where('tramite', 'SS'))
                     ->with(['tipoDocumento', 'comentarios.user'])
             )
+            
+            ->extraAttributes(['class' => 'documents-table'])
             ->columns([
                 TextColumn::make('tipoDocumento.nombre')
                     ->label('Documento')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->extraAttributes(['class' => 'doc-col-name']),
 
                 IconColumn::make('archivo_pdf')
                     ->label('Subido')
@@ -444,7 +472,8 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->state(fn ($record) => !is_null($record->archivo_pdf)),
+                    ->state(fn ($record) => !is_null($record->archivo_pdf))
+                    ->extraAttributes(['class' => 'doc-col-uploaded']),
 
                 TextColumn::make('estatus')
                     ->label('Estado')
@@ -462,7 +491,8 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                         'rechazado' => 'Rechazado',
                         'pendiente' => 'Pendiente',
                         default => $state,
-                    }),
+                    })
+                    ->extraAttributes(['class' => 'doc-col-status']),
             ])
             ->defaultSort(function ($query) use ($ordenDocumentos) {
                 $query->orderByRaw(
@@ -485,6 +515,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->label('Ver PDF')
                     ->icon('heroicon-o-eye')
                     ->color('info')
+                    ->extraAttributes(['class' => 'doc-action view-pdf'])
                     ->visible(fn ($record) => !is_null($record->archivo_pdf))
                     ->modalHeading('')
                     ->modalContent(fn ($record) => view('filament.modals.view-pdf-modal', ['record' => $record]))
@@ -496,6 +527,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->label('Ver Comentarios')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->color('gray')
+                    ->extraAttributes(['class' => 'doc-action view-comments'])
                     ->visible(fn ($record) => $record->comentarios->isNotEmpty())
                     ->modalHeading('')
                     ->modalContent(fn ($record) => view('filament.modals.view-comentarios-modal', ['record' => $record]))
@@ -507,6 +539,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->label('Nuevo Comentario')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->color('success')
+                    ->extraAttributes(['class' => 'doc-action add-comment'])
                     ->modalHeading('Nuevo Comentario')
                     ->modalDescription('Agrega un comentario a este documento')
                     ->form([
@@ -529,6 +562,7 @@ class ViewServicioSocial extends ViewRecord implements HasTable
                     ->label('Cambiar Estado')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
+                    ->extraAttributes(['class' => 'doc-action change-status'])
                     ->visible(fn () => Auth::user()->role === 'admin')
                     ->modalHeading('Cambiar Estado del Documento')
                     ->modalDescription('Selecciona el nuevo estado y opcionalmente agrega un comentario')

@@ -15,7 +15,6 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,34 +26,72 @@ class EmpresasTable
     {
         return $table
             ->query(Empresa::query()->orderBy('nombre'))
+            // ================================================================
+            // 📋 ESTILOS GENERALES DE LA TABLA
+            // ================================================================
+            ->extraAttributes([
+                'style' => 'border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'
+            ])
             ->columns([
+                // ================================================================
+                // 🏢 NOMBRE
+                // ================================================================
                 TextColumn::make('nombre')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(fn ($state) => '🏢 ' . $state)
-                    ->extraAttributes(['class' => 'font-semibold text-gray-800 text-sm']),
+                    ->formatStateUsing(function ($state) {
+                        return '🏢 ' . $state;
+                    })
+                    ->icon('heroicon-o-building-office')
+                    ->iconColor('gray')
+                    ->extraAttributes([
+                        'style' => 'font-weight: 600; color: #1f2937; font-size: 0.875rem;'
+                    ]),
 
+                // ================================================================
+                // 📍 DIRECCIÓN
+                // ================================================================
                 TextColumn::make('direccion')
                     ->label('Dirección')
                     ->icon('heroicon-o-map-pin')
                     ->iconColor('gray')
                     ->limit(40)
-                    ->tooltip(fn ($record) => $record->direccion)
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->tooltip(function ($record) {
+                        return $record->direccion;
+                    })
+                    ->extraAttributes([
+                        'style' => 'color: #4b5563; font-size: 0.875rem;'
+                    ]),
 
+                // ================================================================
+                // 📞 TELÉFONO
+                // ================================================================
                 TextColumn::make('telefono')
                     ->label('Teléfono')
                     ->icon('heroicon-o-phone')
                     ->iconColor('gray')
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->extraAttributes([
+                        'style' => 'font-family: monospace; color: #4b5563; font-size: 0.875rem;'
+                    ]),
 
+                // ================================================================
+                // 👤 CONTACTO
+                // ================================================================
                 TextColumn::make('contacto')
                     ->label('Contacto')
                     ->icon('heroicon-o-user')
                     ->iconColor('gray')
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->extraAttributes([
+                        'style' => 'color: #4b5563; font-size: 0.875rem;'
+                    ]),
 
+                // ================================================================
+                // 🟢🟠🟣 SERVICIOS (SS, PP, Dual)
+                // ================================================================
                 TextColumn::make('servicios')
                     ->label('Servicios')
                     ->formatStateUsing(function ($record) {
@@ -65,16 +102,27 @@ class EmpresasTable
                         return implode(' ', $badges) ?: '⚪ Ninguno';
                     })
                     ->badge()
-                    ->color(fn ($record) => 
-                        $record->servicio_social || $record->practicas || $record->programa_dual ? 'gray' : 'gray'
-                    ),
+                    ->color(function ($record) {
+                        if ($record->servicio_social && $record->practicas && $record->programa_dual) return 'success';
+                        if ($record->servicio_social || $record->practicas || $record->programa_dual) return 'warning';
+                        return 'gray';
+                    })
+                    ->extraAttributes([
+                        'style' => 'font-size: 0.75rem;'
+                    ]),
 
+                // ================================================================
+                // 📅 CONVENIO
+                // ================================================================
                 TextColumn::make('fecha_termino_convenio')
                     ->label('Convenio')
                     ->date('d/m/Y')
                     ->placeholder('♾️ Indefinido')
                     ->icon('heroicon-o-calendar')
-                    ->iconColor('gray')
+                    ->iconColor(function ($record) {
+                        if (!$record->fecha_termino_convenio) return 'gray';
+                        return $record->fecha_termino_convenio->isPast() ? 'danger' : 'success';
+                    })
                     ->color(function ($record) {
                         if (!$record->fecha_termino_convenio) {
                             return 'success';
@@ -90,8 +138,14 @@ class EmpresasTable
                             return '⚠️ Convenio vencido hace ' . abs(intval($dias)) . ' días';
                         }
                         return 'Vence en ' . intval($dias) . ' días';
-                    }),
+                    })
+                    ->extraAttributes([
+                        'style' => 'font-weight: 500;'
+                    ]),
 
+                // ================================================================
+                // 🔴🟢 ACTIVO
+                // ================================================================
                 IconColumn::make('activo')
                     ->label('Activo')
                     ->boolean()
@@ -99,8 +153,13 @@ class EmpresasTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->tooltip(fn ($record) => $record->activo ? 'Activo' : 'Inactivo'),
+                    ->tooltip(function ($record) {
+                        return $record->activo ? '✅ Activo' : '❌ Inactivo';
+                    }),
             ])
+            // ================================================================
+            // 🔍 FILTROS
+            // ================================================================
             ->filters([
                 SelectFilter::make('tipo')
                     ->label('Tipo de convenio')
@@ -136,11 +195,17 @@ class EmpresasTable
                         }
                     }),
             ])
+            // ================================================================
+            // 📋 HEADER ACTIONS (CREAR EMPRESA)
+            // ================================================================
             ->headerActions([
                 Action::make('crear_empresa')
                     ->label('Nueva Empresa')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
+                    ->extraAttributes([
+                        'style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'
+                    ])
                     ->modalHeading('Registrar Nueva Empresa')
                     ->modalDescription('Completa los datos para registrar una nueva empresa aliada')
                     ->modalSubmitActionLabel('Guardar Empresa')
@@ -158,11 +223,17 @@ class EmpresasTable
                             ->send();
                     }),
             ])
+            // ================================================================
+            // 🛠️ ACCIONES
+            // ================================================================
             ->actions([
                 Action::make('editar')
                     ->label('Editar')
                     ->icon('heroicon-o-pencil')
                     ->color('warning')
+                    ->extraAttributes([
+                        'style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'
+                    ])
                     ->modalHeading('Editar Empresa')
                     ->modalSubmitActionLabel('Actualizar')
                     ->modalCancelActionLabel('Cancelar')
@@ -183,13 +254,21 @@ class EmpresasTable
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
-                    ->url(fn ($record) => route('filament.admin.resources.empresas.view', $record))
+                    ->extraAttributes([
+                        'style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'
+                    ])
+                    ->url(function ($record) {
+                        return route('filament.admin.resources.empresas.view', $record);
+                    })
                     ->openUrlInNewTab(false),
 
                 Action::make('eliminar')
                     ->label('Eliminar')
                     ->icon('heroicon-o-trash')
                     ->color('danger')
+                    ->extraAttributes([
+                        'style' => 'border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;'
+                    ])
                     ->requiresConfirmation()
                     ->modalHeading('Eliminar Empresa')
                     ->modalDescription('¿Estás seguro de eliminar esta empresa? Esta acción no se puede deshacer.')
@@ -205,6 +284,9 @@ class EmpresasTable
                             ->send();
                     }),
             ])
+            // ================================================================
+            // 📋 BULK ACTIONS
+            // ================================================================
             ->bulkActions([
                 Action::make('eliminar_seleccionadas')
                     ->label('Eliminar seleccionadas')
@@ -223,6 +305,9 @@ class EmpresasTable
                             ->send();
                     }),
             ])
+            // ================================================================
+            // 📊 CONFIGURACIÓN DE LA TABLA
+            // ================================================================
             ->defaultSort('nombre')
             ->striped()
             ->paginated([15, 25, 50, 100])

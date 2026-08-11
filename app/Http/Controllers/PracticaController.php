@@ -34,7 +34,7 @@ class PracticaController extends Controller
             return view('practicas.no_solicitado');
         }
 
-        // ✅ AGREGAR INFORMES A LA LISTA DE DOCUMENTOS
+        // AGREGAR INFORMES A LA LISTA DE DOCUMENTOS
         $documentosAdministrativos = [
             'Solicitud de Prácticas Profesionales',
             'Elección de Modalidad',

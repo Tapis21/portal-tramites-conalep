@@ -4,72 +4,69 @@ namespace App\Filament\Widgets;
 
 use App\Models\ServicioSocial;
 use Carbon\Carbon;
-use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\Action;
 use Filament\Widgets\TableWidget as BaseWidget;
 
 class ProximasFinalizacionesSS extends BaseWidget
 {
-    protected ?string $pollingInterval = '30s';
-    
-    protected int | string | array $columnSpan = 'full';
-    
+    protected static ?int $sort = 4;
+
     public function table(Table $table): Table
     {
         return $table
             ->query(
                 ServicioSocial::query()
                     ->where('estatus', 'en_progreso')
-                    ->whereNotNull('fecha_inicio')
-                    ->with(['user', 'empresa'])
+                    ->whereNotNull('fecha_limite_segundo_informe')
+                    ->with('user')
+                    ->with('empresa')
+                    ->orderBy('fecha_limite_segundo_informe', 'asc')
             )
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Estudiante')
+                TextColumn::make('user.name')
+                    ->label('Alumno')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('empresa.nombre')
+                TextColumn::make('user.matricula')
+                    ->label('Matrícula')
+                    ->searchable(),
+                TextColumn::make('empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('fecha_inicio')
-                    ->label('Inicio')
-                    ->date('d/m/Y')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('fecha_limite_segundo_informe')
+                    ->placeholder('Sin asignar'),
+                TextColumn::make('fecha_limite_segundo_informe')
                     ->label('Finaliza')
                     ->date('d/m/Y')
                     ->sortable()
-                    ->color(fn ($record) => self::getDaysColor($record)),
-                Tables\Columns\TextColumn::make('dias_restantes')
-                    ->label('Días restantes')
+                    ->color(function ($record) {
+                        $dias = Carbon::now()->diffInDays($record->fecha_limite_segundo_informe);
+                        if ($dias <= 7) return 'danger';
+                        if ($dias <= 15) return 'warning';
+                        return 'success';
+                    }),
+                TextColumn::make('dias_restantes')
+                    ->label('Días')
                     ->state(fn ($record) => Carbon::now()->diffInDays($record->fecha_limite_segundo_informe))
                     ->badge()
-                    ->color(fn ($state) => match (true) {
-                        $state <= 7 => 'danger',
-                        $state <= 15 => 'warning',
-                        default => 'success',
+                    ->color(function ($state) {
+                        if ($state <= 7) return 'danger';
+                        if ($state <= 15) return 'warning';
+                        return 'success';
                     })
-                    ->formatStateUsing(fn ($state) => "{$state} días"),
+                    ->formatStateUsing(fn ($state) => $state . ' días'),
             ])
-            ->emptyStateHeading('¡No hay finalizaciones próximas de Servicio Social!')
-            ->emptyStateDescription('Todas las solicitudes tienen fecha de finalización lejana.')
+            ->actions([
+                Action::make('ver')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
+                    ->color('primary')
+                    ->url(fn ($record) => route('filament.admin.resources.servicio-socials.view', $record->user))
+                    ->openUrlInNewTab(false),
+            ])
+            ->emptyStateHeading('No hay próximas finalizaciones')
             ->emptyStateIcon('heroicon-o-calendar')
-            ->defaultSort('fecha_limite_segundo_informe', 'asc');
-    }
-    
-    protected function getDaysColor($record): string
-    {
-        $dias = Carbon::now()->diffInDays($record->fecha_limite_segundo_informe);
-        
-        if ($dias <= 7) {
-            return 'danger';
-        }
-        
-        if ($dias <= 15) {
-            return 'warning';
-        }
-        
-        return 'success';
+            ->heading('Próximas Finalizaciones SS');
     }
 }
