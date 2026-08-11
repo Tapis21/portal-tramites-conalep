@@ -3,106 +3,52 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Practica;
-use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget as BaseWidget;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
+use Filament\Widgets\TableWidget as BaseWidget;
 
 class SolicitudesPendientesPP extends BaseWidget
 {
-    protected ?string $pollingInterval = '15s';
-    
-    protected int | string | array $columnSpan = 'full';
-    
+    protected static ?int $sort = 3;
+
     public function table(Table $table): Table
     {
         return $table
             ->query(
                 Practica::query()
                     ->where('estatus', 'pendiente')
-                    ->with(['user', 'empresa'])
+                    ->with('user')
+                    ->with('empresa')
+                    ->orderBy('created_at', 'desc')
             )
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Estudiante')
+                TextColumn::make('user.name')
+                    ->label('Alumno')
                     ->searchable()
                     ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('empresa.nombre')
+                TextColumn::make('user.matricula')
+                    ->label('Matrícula')
+                    ->searchable(),
+                TextColumn::make('empresa.nombre')
                     ->label('Empresa')
                     ->searchable()
-                    ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('fecha_inicio')
-                    ->label('Inicio')
+                    ->placeholder('Sin asignar'),
+                TextColumn::make('created_at')
+                    ->label('Fecha de solicitud')
                     ->date('d/m/Y')
                     ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('estatus')
-                    ->label('Estado')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pendiente' => 'warning',
-                        'en_progreso' => 'info',
-                        'liberado' => 'success',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pendiente' => '⏳ Pendiente',
-                        'en_progreso' => '🔄 En progreso',
-                        'liberado' => '✅ Liberado',
-                        default => $state,
-                    }),
             ])
             ->actions([
-                // 👇 BOTÓN APROBAR
-                Action::make('aprobar')
-                    ->label('Aprobar')
-                    ->color('success')
-                    ->icon('heroicon-o-check')
-                    ->button()
-                    ->hidden(fn ($record) => $record->estatus !== 'pendiente')
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        $record->update(['estatus' => 'en_progreso']);
-                        
-                        Notification::make()
-                            ->title('Solicitud aprobada')
-                            ->body('La solicitud de ' . $record->user->name . ' ha sido aprobada.')
-                            ->success()
-                            ->send();
-                    }),
-                
-                // 👇 BOTÓN RECHAZAR
-                Action::make('rechazar')
-                    ->label('Rechazar')
-                    ->color('danger')
-                    ->icon('heroicon-o-x-mark')
-                    ->button()
-                    ->hidden(fn ($record) => $record->estatus !== 'pendiente')
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        $record->update(['estatus' => 'no_solicitado']);
-                        
-                        Notification::make()
-                            ->title('Solicitud rechazada')
-                            ->body('La solicitud de ' . $record->user->name . ' ha sido rechazada.')
-                            ->danger()
-                            ->send();
-                    }),
-                
-                // 👇 BOTÓN EDITAR (antes "Ver")
-                Action::make('editar')
-                    ->label('Editar solicitud')
+                Action::make('ver')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
                     ->color('primary')
-                    ->icon('heroicon-o-pencil-square')
-                    ->button()
-                    ->url(fn ($record) => route('filament.admin.resources.practicas.edit', $record)),
+                    ->url(fn ($record) => route('filament.admin.resources.practicas.view', $record->user))
+                    ->openUrlInNewTab(false),
             ])
-            ->emptyStateHeading('¡No hay solicitudes de Prácticas Profesionales pendientes!')
-            ->emptyStateDescription('Todas las solicitudes han sido revisadas.')
+            ->emptyStateHeading('No hay solicitudes pendientes')
             ->emptyStateIcon('heroicon-o-check-circle')
-            ->defaultSort('created_at', 'desc');
+            ->heading('Solicitudes Pendientes PP');
     }
 }
